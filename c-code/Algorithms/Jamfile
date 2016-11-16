@@ -1,0 +1,57 @@
+
+project 
+  : requirements 
+    <warnings>all 
+    <include>.
+#  : usage-requirements
+#    <include>.
+;
+
+
+
+alias headers                   : : : :  <include>. ;
+
+alias unittest                  : /Jamroot//unittest ;
+alias timer                     : /Jamroot//timer ;
+alias system                    : /Jamroot//system ;
+alias permutation               : /permutation//headers ;
+alias hjelmslev                 : /hjelmslev//headers ;
+alias spezialgroups             : /spezialgroups//headers ;
+alias orbitAlgo                 : /orbitAlgo//headers ;
+alias labra                     : /labelledBranching//headers ;
+alias group                     : labra permutation orbitAlgo ;
+alias graph                     : /graph//headers ;
+alias young_breadth             : /younggroup/methods/breadthfirst//headers ;
+alias young_combined            : /younggroup/methods/combined//headers ;
+alias ladderBreadth             : /laddergame/breadthfirst//headers ;
+alias breadthfirst              : ladderBreadth young_breadth graph ;
+alias combined                  : /laddergame/combined//headers ;
+
+
+unit-test algorithm_depthfirst_simple_splitting    
+    : unittest/algorithm_depthfirst_simple_splitting.cpp group combined young_combined unittest : <testing.launcher>valgrind  ;
+unit-test function_builder_depthfirst_simple_splitting 
+    : unittest/function_builder_depthfirst_simple_splitting.cpp group combined young_combined unittest  : <testing.launcher>valgrind ;
+
+unit-test algorithm_depthfirst_simple_fusing    
+    : unittest/algorithm_depthfirst_simple_fusing.cpp group combined young_combined unittest : <testing.launcher>valgrind  ;
+unit-test function_builder_depthfirst_simple_fusing 
+    : unittest/function_builder_depthfirst_simple_fusing.cpp group combined young_combined unittest : <testing.launcher>valgrind ;
+
+unit-test algorithm_depthfirst_simple_lastfusing    
+    : unittest/algorithm_depthfirst_simple_lastfusing.cpp group combined young_combined unittest : <testing.launcher>valgrind  ;
+unit-test function_builder_depthfirst_simple_lastfusing 
+    : unittest/function_builder_depthfirst_simple_lastfusing.cpp group combined young_combined unittest : <testing.launcher>valgrind ;
+
+
+unit-test algorithm_depthfirst_stroll_fusing    
+    : unittest/algorithm_depthfirst_stroll_fusing.cpp group combined young_combined unittest : <testing.launcher>valgrind  ;
+unit-test function_builder_depthfirst_stroll_fusing 
+    : unittest/function_builder_depthfirst_stroll_fusing.cpp group combined young_combined unittest  : <testing.launcher>valgrind ;
+
+unit-test algorithm_depthfirst_stroll_splitting    
+    : unittest/algorithm_depthfirst_stroll_splitting.cpp group combined young_combined unittest : <testing.launcher>valgrind  ;
+unit-test function_builder_depthfirst_stroll_splitting 
+    : unittest/function_builder_depthfirst_stroll_splitting.cpp group combined young_combined unittest  : <testing.launcher>valgrind ;
+
+

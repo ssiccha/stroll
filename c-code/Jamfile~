@@ -1,0 +1,15 @@
+
+import testing ; 
+
+project
+  : requirements 
+<library>/hjelmslev//unittestlib
+<source>/actionBase//groupaction
+<source>/labelled-branching//labra
+;
+
+
+alias united : /laddergame//united ;
+alias simpleYoungGroup : united : : : <include>/laddergame//united <include>./simpleYoungGroup ;
+alias abstractBuilder :  : : : <include>builder_algorithm_ladderstep.hpp ;
+

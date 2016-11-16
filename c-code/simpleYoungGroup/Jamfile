@@ -1,0 +1,61 @@
+
+project 
+  : requirements 
+    <warnings>all 
+    <include>.
+#  : usage-requirements
+#    <include>.
+;
+
+
+
+alias headers                   : : : :  <include>. ;
+
+alias unittest                  : /Jamroot//unittest ;
+alias timer                     : /Jamroot//timer ;
+alias system                    : /Jamroot//system ;
+alias permutation               : /permutation//headers ;
+alias hjelmslev                 : /hjelmslev//headers ;
+alias spezialgroups             : /spezialgroups//headers ;
+alias orbitAlgo                 : /orbitAlgo//headers ;
+alias labra                     : /labelledBranching//headers ;
+alias group                     : labra permutation orbitAlgo ;
+alias graph                     : /graph//headers ;
+alias young_breadth             : /younggroup/methods/breadthfirst//headers ;
+alias young_combined             : /younggroup/methods/combined//headers ;
+alias ladderBreadth             : /laddergame/breadthfirst//headers ;
+alias breadthfirst              : ladderBreadth young_breadth graph ;
+alias loadBalance               : /loadBalance//headers ;
+
+
+#unit-test lambda               : unittest/task_builder_and_load_balancer.cpp unittest ;
+#unit-test laddergame_light     :   unittest/laddergame_light.cpp unittest group graph loadBalance young_combined : <testing.launcher>valgrind ;
+exe kiermaier                   :   unittest/kiermaier.cpp unittest group graph young_combined : <variant>release <optimization>speed <link>static ;
+#exe kiermaier                  :   unittest/kiermaier.cpp unittest group graph loadBalance young_combined : <variant>profile ;
+unit-test depthfirst_stroll_unittest    :   unittest/depthfirst_stroll.cpp unittest group graph loadBalance young_combined : <variant>debug ;
+exe laddergame_light            :   unittest/laddergame_light.cpp unittest group graph loadBalance young_combined : <define>GRAPHSIZE=7 <variant>release ;
+exe rubic                       :   unittest/rubic_light.cpp unittest group graph loadBalance young_combined : <define>GRAPHSIZE=7 <variant>release ;
+exe light_breadthfirst          :   unittest/laddergame_light_breadthfirst.cpp unittest group graph loadBalance young_combined : <define>GRAPHSIZE=7 <variant>release ;
+exe depthfirst_stroll           :   unittest/depthfirst_stroll.cpp unittest group graph loadBalance young_combined : <define>GRAPHSIZE=6 <variant>release ;
+
+
+unit-test sandbox       :   unittest/sandbox.cpp unittest group graph loadBalance  young_combined : <variant>debug ;
+
+
+run                                   
+    unittest/laddergame_light.cpp  unittest group graph loadBalance young_combined           : : : 
+    <define>UNITTEST <define>GRAPHSIZE=6 <variant>release <optimization>speed : 
+    LadderGameLight ;
+
+run                                   
+    unittest/depthfirst_stroll.cpp  unittest group graph loadBalance young_combined           : : : 
+    <define>UNITTEST <define>GRAPHSIZE=6 <variant>release <optimization>speed : 
+    DepthfirstStroll ;
+
+
+#run                      
+#    unittest/kiermaier.cpp  unittest group graph loadBalance young_combined           : : : 
+#    <define>UNITTEST <variant>release <optimization>speed : 
+#    kiermaier2 ;
+
+
