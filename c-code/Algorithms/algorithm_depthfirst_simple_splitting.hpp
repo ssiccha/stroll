@@ -185,13 +185,13 @@ namespace laddergame {
 
                 foreach(e1, VarphiInv(e2) ) {
 
-                    // check:   a1 = min_{x \in C2} e1*b2*x 
                     if ( C1.size() == C2.size() ) 
                       b1 = b2;
 
                     else
                       b1 = b2*FindOrbitRep(e1*b2,C2);
 
+                    // check:   a1 = min_{x \in C2} e1*b2*x 
                     if ( false == SmallerOrEqual(Psi1(e1<<b1),a1) ) 
                         continue;
 
