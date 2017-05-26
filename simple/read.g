@@ -1,0 +1,1 @@
+Read("./toDeclare.g");
