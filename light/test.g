@@ -39,17 +39,18 @@ LeiterspielLightGraphGeneration := function(k,n)
           fi;
         od;
       else
-        z := SmallestStrongPathToCoset(g,i,ladder);
         # this is needed to calculate the stabilizer
         result := FindSmallerOrbitRepresentative(g,i,ladder,B);
         if not result.isCanonical then
           # graph can be build from a smaller graph
           continue;
         fi;
+        z := SmallestStrongPathToCoset(g,i,ladder);
         U := ConjugateGroup(result.stabilizer,z^-1);
         tmp := FindOrbitRep( g*z^-1, i, U, ladder);
-        # A_ig*z^-1 = A_i*tmp.orbitCanonicalElement ?
-        if not g*z^-1*tmp.orbitCanonicalElement^-1 in ladder.chain[i-1] then
+        # the graph can be constructed from multiple graphs in the preimage
+        # choose one of them, so that the new graph is constructed exactly once
+        if not 1 = tmp.orbitMinPosition then
           # this is needed to prevent double counts
           continue;
         fi;

@@ -202,19 +202,27 @@ CheckCanonicalStroll := 0;
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 SplitOrbit := function( block, blockStack, p, k, ladder, debug)
   local g, b, i, z, smallest, canonizerToSmallest, e, preimage, U, tmp, canonical, canonizer, newBlock, h;
-  Print("\nDebug Mode");
   g := block.g;
   b := block.b;
   i := block.i;
   z := ladder.PathRepresentative(p,i);
+  U := ConjugateGroup(ladder.C[i],z^-1);
+  if debug = true then
+    Print("\nDebug Mode\n");
+    Print("p = ",p,"\n");
+    Print("C = ",ladder.C[i],"\n");
+  fi;
   smallest := p*z^-1;
   canonizerToSmallest := One(p);
   # preimage is a transversal of E[k][i+1]\E[k][i];
   e := RightCoset(ladder.E[k][i+1],One(g));
   preimage := Orbit(ladder.E[k][i], e, OnRight);  
   preimage := List(preimage,x -> Representative(x));
-  U := ConjugateGroup(ladder.C[i],z^-1);
   for h in preimage do
+    if debug = true then
+      Print("durchlaufe mit h*g = ",h*g,"\n");  
+      Print("durchlaufe mit h*g*b = ",h*g*b,"\n");  
+    fi;
     ## DEBUG 
     if  not h*g*b*z^-1 in ladder.chain[i] then
       Error("h*g*b*z^-1 is not in A_i");
@@ -229,13 +237,19 @@ SplitOrbit := function( block, blockStack, p, k, ladder, debug)
     ## DEBUG end
     canonizer := tmp.canonizer;
     if false = ladder.LowerOrEqualForLadderGroupCosets( smallest, canonical, i+1) then
+      if debug = true then
+        Print("Nicht kanonisch, kleinerer Kandidat ist ",h*g*b*canonizer^z, "\n");
+      fi;
       smallest := canonical;
       canonizerToSmallest := b*canonizer^z;
     elif false = ladder.LowerOrEqualForLadderGroupCosets( canonical, p*z^-1, i+1) then
+      if debug = true then
+        Print("irrelevanter Kandidat:  ",h*g*b*canonizer^z, "\n");
+      fi;
       continue;
     fi;
     newBlock := rec( g := h*g, b := b*canonizer^z, i := i+1 );
-    Print( "newBlock ", newBlock, "\n" );
+    # Print "newBlock ", newBlock, "\n" );
     StackPush(blockStack,newBlock);
   od;
   return canonizerToSmallest; 
@@ -256,7 +270,7 @@ FuseOrbit := function( block, blockStack, ladder )
   if g*z^-1*tmp.orbitCanonicalElement^-1 in ladder.chain[i] then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
-    Print( "newBlock ", block, "\n" );
+    # Print "newBlock ", block, "\n" );
   fi;
 end;
 
@@ -268,11 +282,11 @@ end;
 # It also calculates the stabilizer of A_kp in B.
 CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
   local block, i, blockStack, b, isSplitStep, canonizer;
-  Print("\n");
-  Print(" ---- ---- ---- ", k, " ---- ---- ----\n");
-  Print(" ---- ---- ---- ", k, " ---- ---- ----\n");
-  Print(" ---- ---- ---- ", k, " ---- ---- ----\n");
-  Print("\n");
+  # Print"\n");
+  # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
+  # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
+  # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
+  # Print"\n");
   counter := 0;
   ladder.C[k] := ladder.C[k-1];
   block := rec( g := p, b := One(p), i := 1);
@@ -280,21 +294,21 @@ CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
   StackPush( blockStack, block);
   while not StackIsEmpty(blockStack) do
     counter := counter + 1;
-    Print( "----------- counter = ", counter, "-----------\n" );
+    # Print "----------- counter = ", counter, "-----------\n" );
     block := StackPop(blockStack);
-    Print( "Pop: ", block, "\n" );
+    # Print "Pop: ", block, "\n" );
     i := block.i;
     b := block.b;
     if i+1 = k then
-      Print("Stabilizer size before: ", Size(ladder.C[i+1]), "\n");
+      # Print"Stabilizer size before: ", Size(ladder.C[i+1]), "\n");
       ladder.C[i+1] := ClosureGroup(ladder.C[i+1],b);
-      Print("After: ", Size(ladder.C[i+1]), "\n");
+      # Print"After: ", Size(ladder.C[i+1]), "\n");
       continue;
     fi;
     isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
     if isSplitStep then
       ## DEBUG 
-      if  counter = 10 and k = 8 then
+      if  counter = 1000 and k = 8 then
         canonizer := SplitOrbit(block,blockStack,p,k,ladder,true);
         Error("break");
       else
@@ -373,13 +387,13 @@ makeStandardPermutationLadder := function(n)
   local groups, gens, i;
   groups := [SymmetricGroup(n)];
   groups[2] := Stabilizer(groups[1],1);
-  for i in [ 2 .. n-1 ] do
+  for i in [ 2 .. n ] do
     groups[2*i-1] := Stabilizer(groups[2*i-2],i);
     gens := List(GeneratorsOfGroup(groups[2*i-1]));
     Add(gens,(1,i));
     groups[2*i] := Group(gens);
   od;
-  groups[2*n-1] := SymmetricGroup(n);
+# groups[2*n-1] := SymmetricGroup(n);
   return constructStrongLadder(groups);;
 end;
 
