@@ -45,7 +45,7 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local coset, stabilizer, L, g, stab, result, z, U, tmp, i, h;
+  local coset, stabilizer, L, g, stab, canonizer, result, z, U, tmp, i, h;
   coset := rec(g := One(B), stabilizer := B);
   L := [ [coset] ];
   for i in [ 2 .. k ] do
@@ -56,11 +56,17 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
         for h in ladder.transversal[i] do
           # stab is more efficient then B
-          result := FindSmallerOrbitRepresentative(h*g,i,ladder,stab);
-          if true = result.isCanonical then
-            coset := rec(g := h*g, stabilizer := result.stabilizer);
+          ladder.C[i-1] := stab;
+          canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,ladder);
+          if One(g) = canonizer then
+            coset := rec(g := h*g, stabilizer := ladder.C[i]);
             Add(L[i],coset);
           fi;
+#         result := FindSmallerOrbitRepresentative(h*g,i,ladder,stab);
+#         if true = result.isCanonical then
+#           coset := rec(g := h*g, stabilizer := result.stabilizer);
+#           Add(L[i],coset);
+#         fi;
         od;
       else
         # this is needed to calculate the stabilizer

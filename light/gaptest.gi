@@ -326,9 +326,7 @@ SplitOrbit := function( block, blockStack, p, k, ladder, debug)
   smallest := p*z^-1;
   canonizerToSmallest := One(p);
   # preimage is a transversal of E[k][i+1]\E[k][i];
-  e := RightCoset(ladder.E[k][i+1],One(g));
-  preimage := Orbit(ladder.E[k][i], e, OnRight);  
-  preimage := List(preimage,x -> Representative(x));
+  preimage := ladder.E_ij_transversal[k][i+1]; 
   for h in preimage do
     if debug = true then
       Print("durchlaufe mit h*g = ",h*g,"\n");  
@@ -497,14 +495,19 @@ end;
 BuildStroLLSubladder := function(ladder)
   local i, j, c;
   ladder.E := [];
+  ladder.E_ij_transversal := [];
   for i in [ 2 .. Size(ladder.chain)-1 ] do
     ladder.E[i] := [ladder.chain[i]];
+    ladder.E_ij_transversal[i] := [];
     for j in [ 2 .. i ] do
       if ladder.subgroupIndex[j-1] < ladder.subgroupIndex[j] then
-        c := RightCoset(ladder.chain[j],One(ladder.G));
-        ladder.E[i][j] := Stabilizer(ladder.E[i][j-1],c,OnRight); 
+        ladder.E[i][j] := Intersection(ladder.chain[i],ladder.chain[j]); 
+        # E_ij_transversal = E_[i][j]/E[i][j-1];
+        ladder.E_ij_transversal[i][j] := RightTransversal(ladder.E[i][j-1],ladder.E[i][j]);
       else
         ladder.E[i][j] := Intersection(ladder.chain[i],ladder.chain[j]); 
+        # E_ij_transversal = E_[i][j-1]/E[i][j];
+        ladder.E_ij_transversal[i][j] := RightTransversal(ladder.E[i][j],ladder.E[i][j-1]);
       fi;
     od;
   od;
