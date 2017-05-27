@@ -45,49 +45,52 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local coset, stabilizer, L, g, stab, canonizer, result, z, U, tmp, i, h;
-  coset := rec(g := One(B), stabilizer := B);
+  local coset, stabilizer, L, cosetStack, g, i, stab, canonizer, result, z, U, tmp, h;
+  ladder.C := [B];
+  cosetStack := StackCreate(100);
+  coset := rec(g := One(B), stabilizer := B, i := 1);
+  StackPush(cosetStack,coset);
   L := [ [coset] ];
   for i in [ 2 .. k ] do
     L[i] := [];
-    for coset in L[i-1] do
-      g := coset.g;
-      stab := coset.stabilizer;
-      if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-        for h in ladder.transversal[i] do
-          # stab is more efficient then B
-          ladder.C[i-1] := stab;
-          canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,ladder);
-          if One(g) = canonizer then
-            coset := rec(g := h*g, stabilizer := ladder.C[i]);
-            Add(L[i],coset);
-          fi;
-#         result := FindSmallerOrbitRepresentative(h*g,i,ladder,stab);
-#         if true = result.isCanonical then
-#           coset := rec(g := h*g, stabilizer := result.stabilizer);
-#           Add(L[i],coset);
-#         fi;
-        od;
-      else
-        # this is needed to calculate the stabilizer
-        result := FindSmallerOrbitRepresentative(g,i,ladder,B);
-        if not result.isCanonical then
-          # coset can be build from a smaller coset
-          continue;
+  od;
+  while not StackIsEmpty(cosetStack) do
+    coset := StackPop(cosetStack);
+    g := coset.g;
+    i := coset.i+1;
+    if  i = k then
+      continue;
+    fi;
+    stab := coset.stabilizer;
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      for h in ladder.transversal[i] do
+        # stab is more efficient then B
+#       ladder.C[i-1] := stab;
+        canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,ladder);
+        if One(g) = canonizer then
+          coset := rec(g := h*g, stabilizer := ladder.C[i],i := i);
+          Add(L[i],coset);
+          StackPush(cosetStack,coset);
         fi;
-        z := SmallestStrongPathToCoset(g,i,ladder);
-        U := ConjugateGroup(result.stabilizer,z^-1);
-        tmp := FindOrbitRep( g*z^-1, i, U, ladder);
-        # the coset can be constructed from multiple cosets in the preimage
-        # choose one of them, so that the new coset is constructed exactly once
-        if not 1 = tmp.orbitMinPosition then
-          # this is needed to prevent double counts
-          continue;
-        fi;
-        coset := rec(g := g, stabilizer := result.stabilizer);
-        Add(L[i],coset);
-      fi; 
-    od;
+      od;
+    else
+      # If p is the smallest path to A_ip, then 
+      # A_ig should be constructed from the coset A_{i-1}p.
+      # So the check for canonity can be done with this z: 
+      z := SmallestStrongPathToCoset(g,i-1,ladder);
+      # the stabilizer ladder.C[i-1] could have been overwritten in 
+      # another branch. 
+      # The other stabilizer stay unchanged in an depth first search algorithm.
+      ladder.C[i-1] := coset.stabilizer;
+      canonizer := CheckSmallestInDoubleCosetFuse(i,z,ladder);
+      if not One(g) = canonizer then
+        # coset can be build from a smaller coset
+        continue;
+      fi;
+      coset := rec(g := g, stabilizer := ladder.C[i], i := i);
+      Add(L[i],coset);
+      StackPush(cosetStack,coset);
+    fi; 
   od;
   return L;
 end;
