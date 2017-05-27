@@ -66,6 +66,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       for h in ladder.transversal[i] do
         # stab is more efficient then B
 #       ladder.C[i-1] := stab;
+#       z := SmallestStrongPathToCoset(h*g,i,ladder);
         canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,ladder);
         if One(g) = canonizer then
           coset := rec(g := h*g, stabilizer := ladder.C[i],i := i);
@@ -78,13 +79,17 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # A_ig should be constructed from the coset A_{i-1}p.
       # So the check for canonity can be done with this z: 
       z := SmallestStrongPathToCoset(g,i-1,ladder);
+      g := SmallestStrongPathToCoset(g,i,ladder);
+      if not g*z^-1 in ladder.chain[i-1] then
+        continue;
+      fi;
       # the stabilizer ladder.C[i-1] could have been overwritten in 
       # another branch. 
-      # The other stabilizer stay unchanged in an depth first search algorithm.
+      # In an depth first search algorithm the other stabilizers stay unchanged.
       ladder.C[i-1] := coset.stabilizer;
-      canonizer := CheckSmallestInDoubleCosetFuse(i,z,ladder);
+      canonizer := CheckSmallestInDoubleCosetFuse(i,g,ladder);
       if not One(g) = canonizer then
-        # coset can be build from a smaller coset
+        # coset can be constructed from a smaller coset
         continue;
       fi;
       coset := rec(g := g, stabilizer := ladder.C[i], i := i);
@@ -97,9 +102,17 @@ end;
 
 
 LeiterspielLightGraphGeneration := function(k,n)
+  ## a_i refers to the number of doublecosets in A_i\A_1/B.
+  ## The sequence of all a_i with even index is a subsequence of A008406.
+  ## This can be checked against the sequence A008406 in oeis.org.
   local ladder, B;
   ladder := makeStandardPermutationLadder(n*(n-1)/2);
   B := makeGraphGroup(n);
+  for i in [ 1 .. Size(graphs)  ] do 
+    if 0 = i mod 2 then 
+      Print("Number of canonical coset in A_",i," G B is ",Size(graphs[i]),"\n"); 
+    fi; 
+  od; 
   return LeiterspielLightDoubleCosets(k,B,ladder);
 end;
 
