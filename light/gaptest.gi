@@ -27,6 +27,7 @@ buildStroLLTransversals := function(groups)
       if not 1 = PositionCanonical(ladder.transversal[i],One(U)) then
         Error("Assumption on the transversal is not fulfilled");
       fi;
+      ## DEBUG end
       ladder.rightcosets[i] := RightCosets(U,ladder.chain[i-1]);
       ladder.hom[i] := FactorCosetAction(U,ladder.chain[i-1]);
 #     ladder.hom[i] := ActionHomomorphism(U,ladder.transversal[i],OnRight);
@@ -40,6 +41,7 @@ buildStroLLTransversals := function(groups)
       if not 1 = PositionCanonical(ladder.transversal[i],One(U)) then
         Error("Assumption on the transversal is not fulfilled");
       fi;
+      ## DEBUG end
       ladder.rightcosets[i] := RightCosets(ladder.chain[i-1],U);
       ladder.hom[i] := FactorCosetAction(ladder.chain[i-1],U);
     fi;
@@ -337,14 +339,22 @@ SplitOrbit := function( block, blockStack, p, k, ladder, debug)
       Error("h*g*b*z^-1 is not in A_i");
     fi;
     ## DEBUG end
-    tmp := FindOrbitRep( h*g*b*z^-1, i+1, U, ladder );
-    canonical := tmp.orbitCanonicalElement;
+    ## this optimisation is experimental and must be checked
+    ## opimisation begin 
+    if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
+      canonical := h*g*b*z^-1; 
+      canonizer := One(g);
+    else
+      tmp := FindOrbitRep( h*g*b*z^-1, i+1, U, ladder );
+      canonical := tmp.orbitCanonicalElement;
+      canonizer := tmp.canonizer;
+    fi;
+    ## opimisation end
     ## DEBUG 
     if not canonical in ladder.chain[i] then
       Error("the canonical orbit representative is not in A_i");
     fi;
     ## DEBUG end
-    canonizer := tmp.canonizer;
     if false = ladder.LowerOrEqualForLadderGroupCosets( smallest, canonical, i+1) then
       if debug = true then
         Print("Nicht kanonisch, kleinerer Kandidat ist ",h*g*b*canonizer^z, "\n");
@@ -371,6 +381,14 @@ FuseOrbit := function( block, blockStack, ladder )
   g := block.g;
   i := block.i;
   b := block.b;
+  ## this optimisation is experimental and must be checked
+  ## opimisation begin 
+  if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
+    block := rec( g := g, b := b, i := i+1 );
+    StackPush(blockStack,block);
+    return;
+  fi;
+  ## opimisation end
   ## TODO is this performance relevant?
   z := SmallestStrongPathToCoset(g,i+1,ladder);
   U := ConjugateGroup(ladder.C[i+1],b^-1*z^-1);
