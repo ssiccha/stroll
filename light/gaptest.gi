@@ -124,7 +124,7 @@ end;
 
 
 FindOrbitRep := function( g, k, V, ladder)
-  local result, transv, U, H, versionSwitchOrbitAlgorithm, gens, acts, gp, tmp, homAct, ug, r, ur;
+  local result, transv, U, H, versionSwitchOrbitAlgorithm, omega, V_Image, gp, tmp, mp, gens, acts, homAct, ug, um;
   result := rec();
   transv := ladder.transversal[k];
   if ladder.subgroupIndex[k-1] < ladder.subgroupIndex[k] then
@@ -143,43 +143,93 @@ FindOrbitRep := function( g, k, V, ladder)
   fi;
   ## DEBUG end 
 
-  versionSwitchOrbitAlgorithm := 3;
+  versionSwitchOrbitAlgorithm := 2;
 
-  ## Orbit Algorithm Version three 
-  if 3 = versionSwitchOrbitAlgorithm then
+  ## Orbit Algorithm Version five 
+  if 5 = versionSwitchOrbitAlgorithm then
+    omega := [ 1 .. Size(transv) ];
+    homAct := function(o,h)
+      o := transv[o];
+      o := o*h;
+      return PositionCanonical(transv,o);
+    end;
+    gp := PositionCanonical(transv,g);
+    tmp := OrbitStabilizer(V,omega,gp,homAct);
+    result.stabilizer := tmp.stabilizer;
+    result.orbitPositions := List( tmp.orbit ); 
+    result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+    result.orbitMinPosition := Minimum(result.orbitPositions);
+    result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
+    mp := result.orbitMinPosition;
+    result.canonizer := RepresentativeAction(V,omega,gp,mp,homAct);
+
+
+  ## Orbit Algorithm Version four 
+  elif 4 = versionSwitchOrbitAlgorithm then
+    omega := [ 1 .. Size(transv) ];
     gens := List(GeneratorsOfGroup(V));
     acts := List(gens, x -> Image(ladder.hom[k],x));
     gp := PositionCanonical(transv,g);
-    tmp := OrbitStabilizer(V,[1..Size(transv)],gp,gens,acts,OnPoints);
+    tmp := OrbitStabilizer(V,omega,gp,gens,acts,OnPoints);
     result.stabilizer := tmp.stabilizer;
     result.orbitPositions := List( tmp.orbit ); 
     result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+    result.orbitMinPosition := Minimum(result.orbitPositions);
+    result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
+    mp := result.orbitMinPosition;
+    result.canonizer := RepresentativeAction(V,omega,gp,mp,gens,acts,OnPoints);
+
+  ## Orbit Algorithm Version three 
+  elif 3 = versionSwitchOrbitAlgorithm then
+    omega := [ 1 .. Size(transv) ];
+    homAct := function(o,h)
+      h := Image(ladder.hom[k],h);
+      o := o^h;
+      return o;
+    end;
+    gp := PositionCanonical(transv,g);
+    tmp := OrbitStabilizer(V,omega,gp,homAct);
+    result.stabilizer := tmp.stabilizer;
+    result.orbitPositions := List( tmp.orbit ); 
+    result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+    result.orbitMinPosition := Minimum(result.orbitPositions);
+    result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
+    mp := result.orbitMinPosition;
+    result.canonizer := RepresentativeAction(V,omega,gp,mp,homAct);
 
   ## Orbit Algorithm Version two 
   elif 2 = versionSwitchOrbitAlgorithm then
-    homAct := function(omega,h)
-      h := Image(ladder.hom[k],h);
-      omega := omega^h;
-      return omega;
+    homAct := function(o,h)
+      o := o*h;
+      o := PositionCanonical(transv,o);
+      return transv[o];
     end;
-    gp := PositionCanonical(transv,g);
-    tmp := OrbitStabilizer(V,gp,homAct);
+    ug := transv[PositionCanonical(transv,g)];
+    tmp := OrbitStabilizer(V,transv,ug,homAct);
     result.stabilizer := tmp.stabilizer;
-    result.orbitPositions := List( tmp.orbit ); 
-    result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+    result.orbitRepresentatives := List( tmp.orbit ); 
+    result.orbitPositions := List( result.orbitRepresentatives, x -> Position(transv,x) ); 
+#   result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+    result.orbitMinPosition := Minimum(result.orbitPositions);
+    result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
+    um := result.orbitCanonicalElement;
+    result.canonizer := RepresentativeAction(V,transv,ug,um,homAct);
 
   ## Orbit Algorithm Version one
   else 
     ug := RightCoset(U,g);
-    tmp := OrbitStabilizer(V,ug,OnRight);
+    tmp := OrbitStabilizer(V,ladder.rightcosets[k],ug,OnRight);
     result.stabilizer := tmp.stabilizer;
     result.orbitRepresentatives := List( tmp.orbit, x -> Representative(x) ); 
     result.orbitPositions := List( result.orbitRepresentatives, x -> PositionCanonical(transv,x) ); 
     result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+    result.orbitMinPosition := Minimum(result.orbitPositions);
+    result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
+    ug := RightCoset(U,g);
+    um := RightCoset(U,result.orbitCanonicalElement);
+    result.canonizer := RepresentativeAction(V,ladder.rightcosets[k],ug,um,OnRight);
   fi;
 
-  result.orbitMinPosition := Minimum(result.orbitPositions);
-  result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
 
   ## DEBUG
   if  not IsSubgroup(V,result.stabilizer) then
@@ -193,10 +243,6 @@ FindOrbitRep := function( g, k, V, ladder)
   fi;
   ## DEBUG end 
 
-  r := result.orbitCanonicalElement;
-  ug := RightCoset(U,g);
-  ur := RightCoset(U,r);
-  result.canonizer := RepresentativeAction(V,ug,ur,OnRight);
 
   ## DEBUG begin
   if not result.canonizer in V then
