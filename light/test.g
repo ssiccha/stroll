@@ -1,4 +1,31 @@
 
+
+makeStandardPermutationLadder := function(n)
+  local groups, gens, i;
+  groups := [SymmetricGroup(n)];
+  groups[2] := Stabilizer(groups[1],1);
+  for i in [ 2 .. n ] do
+    groups[2*i-1] := Stabilizer(groups[2*i-2],i);
+    gens := List(GeneratorsOfGroup(groups[2*i-1]));
+    Add(gens,(1,i));
+    groups[2*i] := Group(gens);
+  od;
+# groups[2*n-1] := SymmetricGroup(n);
+  return constructStrongLadder(groups);;
+end;
+
+
+makeGraphGroup := function(n)
+  local omega, hom;
+  omega := Orbit( SymmetricGroup(n), [1,2], OnSets ); 
+  omega := List(omega);
+  Sort(omega);
+  hom := ActionHomomorphism(SymmetricGroup(n),omega,OnSets);
+  return Image(hom);
+end;
+
+
+
 test := function(i,k)
   local ladder, U, g, s, u;
   ladder := makeStandardPermutationLadder(k);
@@ -17,49 +44,54 @@ test := function(i,k)
 end;
 
 
-
-LeiterspielLightGraphGeneration := function(k,n)
-  local ladder, B, graph, stabilizer, L, g, stab, result, z, U, tmp, i, h;
-  ladder := makeStandardPermutationLadder(n*(n-1)/2);
-  B := makeGraphGroup(n);
-  graph := rec(g := One(B), stabilizer := B);
-  L := [ [graph] ];
+LeiterspielLightDoubleCosets := function(k,B,ladder)
+  local coset, stabilizer, L, g, stab, result, z, U, tmp, i, h;
+  coset := rec(g := One(B), stabilizer := B);
+  L := [ [coset] ];
   for i in [ 2 .. k ] do
     L[i] := [];
-    for graph in L[i-1] do
-      g := graph.g;
-      stab := graph.stabilizer;
+    for coset in L[i-1] do
+      g := coset.g;
+      stab := coset.stabilizer;
       if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
         for h in ladder.transversal[i] do
           # stab is more efficient then B
           result := FindSmallerOrbitRepresentative(h*g,i,ladder,stab);
           if true = result.isCanonical then
-            graph := rec(g := h*g, stabilizer := result.stabilizer);
-            Add(L[i],graph);
+            coset := rec(g := h*g, stabilizer := result.stabilizer);
+            Add(L[i],coset);
           fi;
         od;
       else
         # this is needed to calculate the stabilizer
         result := FindSmallerOrbitRepresentative(g,i,ladder,B);
         if not result.isCanonical then
-          # graph can be build from a smaller graph
+          # coset can be build from a smaller coset
           continue;
         fi;
         z := SmallestStrongPathToCoset(g,i,ladder);
         U := ConjugateGroup(result.stabilizer,z^-1);
         tmp := FindOrbitRep( g*z^-1, i, U, ladder);
-        # the graph can be constructed from multiple graphs in the preimage
-        # choose one of them, so that the new graph is constructed exactly once
+        # the coset can be constructed from multiple cosets in the preimage
+        # choose one of them, so that the new coset is constructed exactly once
         if not 1 = tmp.orbitMinPosition then
           # this is needed to prevent double counts
           continue;
         fi;
-        graph := rec(g := g, stabilizer := result.stabilizer);
-        Add(L[i],graph);
+        coset := rec(g := g, stabilizer := result.stabilizer);
+        Add(L[i],coset);
       fi; 
     od;
   od;
   return L;
+end;
+
+
+LeiterspielLightGraphGeneration := function(k,n)
+  local ladder, B;
+  ladder := makeStandardPermutationLadder(n*(n-1)/2);
+  B := makeGraphGroup(n);
+  return LeiterspielLightDoubleCosets(k,B,ladder);
 end;
 
 

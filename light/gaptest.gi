@@ -8,6 +8,7 @@ buildStroLLTransversals := function(groups)
   ladder.subgroupIndex := [1];
   ladder.transversal := [RightTransversal(ladder.G,ladder.G)];
   ladder.rightcosets := [RightCosets(ladder.G,ladder.G)];
+  ladder.hom := [];
   for i in [2 .. Size(groups)] do
     if false = IsSubgroup(ladder.G,groups[i]) then
       Error("Entry ",i," in grouplist is not a subgroup of the group on the first position in the grouplist\n");
@@ -22,14 +23,25 @@ buildStroLLTransversals := function(groups)
         return;
       fi;
       ladder.transversal[i] := RightTransversal(U,ladder.chain[i-1]);
+      ## DEBUG
+      if not 1 = PositionCanonical(ladder.transversal[i],One(U)) then
+        Error("Assumption on the transversal is not fulfilled");
+      fi;
       ladder.rightcosets[i] := RightCosets(U,ladder.chain[i-1]);
+      ladder.hom[i] := FactorCosetAction(U,ladder.chain[i-1]);
+#     ladder.hom[i] := ActionHomomorphism(U,ladder.transversal[i],OnRight);
     else
       if false = IsSubgroup(ladder.chain[i-1],U) then
         Error("Entry ",i," in list is not a subgroup of the previous group on position ",i-1," in the grouplist\n"); 
         return;
       fi;
       ladder.transversal[i] := RightTransversal(ladder.chain[i-1],U);
+      ## DEBUG
+      if not 1 = PositionCanonical(ladder.transversal[i],One(U)) then
+        Error("Assumption on the transversal is not fulfilled");
+      fi;
       ladder.rightcosets[i] := RightCosets(ladder.chain[i-1],U);
+      ladder.hom[i] := FactorCosetAction(ladder.chain[i-1],U);
     fi;
     ladder.chain[i] := U;
   od;
@@ -40,11 +52,16 @@ end;
 
 BuildStroLLPathRepresentativeMapping := function(ladder)
   ladder.PathRepresentative := function(g,k)
-    local z, position, canonical, i;
+    local z, perm, position, canonical, i;
     z := One(ladder.G); 
     for i in [ 2 .. k ] do
       if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-        position := PositionCanonical(ladder.transversal[i],g);
+        perm := Image(ladder.hom[i],g);
+        position := 1^perm;
+#       position := PositionCanonical(ladder.transversal[i],g);
+#       if not position = position2 then
+#         Error("the positioning via homomorphism is not correct"); 
+#       fi;
         canonical := ladder.transversal[i][position];
         g := g*canonical^-1;
         z := canonical*z;
@@ -58,11 +75,13 @@ end;
 
 BuildStroLLPathCompare := function(ladder)
   ladder.LowerOrEqualPath := function( a, b, k)
-    local i, position_a, position_b, canonical;
+    local perm_a, position_a, perm_b, position_b, canonical, i;
     for i in [ 2 .. k ] do
       if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-        position_a := PositionCanonical(ladder.transversal[i],a);        
-        position_b := PositionCanonical(ladder.transversal[i],b);        
+        perm_a := Image(ladder.hom[i],a);
+        position_a := 1^perm_a;
+        perm_b := Image(ladder.hom[i],b);
+        position_b := 1^perm_b;
         if  position_a < position_b then
           return true;
         elif  position_a > position_b  then 
@@ -80,8 +99,7 @@ end;
 
 BuildStroLLTransversalCompare := function(ladder)
   ladder.LowerOrEqualForLadderGroupCosets := function( a, b, i)
-    local position_a, position_b, canonical;
-    ## DEBUG 
+    local perm_a, perm_b, position_a, position_b;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
       if not a in ladder.chain[i-1] then
         Error("a is not in A_{i-1}");
@@ -89,8 +107,12 @@ BuildStroLLTransversalCompare := function(ladder)
       if not b in ladder.chain[i-1] then
         Error("b is not in A_{i-1}");
       fi;
-      position_a := PositionCanonical(ladder.transversal[i],a);        
-      position_b := PositionCanonical(ladder.transversal[i],b);        
+      perm_a := Image(ladder.hom[i],a);
+      perm_b := Image(ladder.hom[i],b);
+      position_a := 1^perm_a;
+      position_b := 1^perm_b;
+#     position_a := PositionCanonical(ladder.transversal[i],a);        
+#     position_b := PositionCanonical(ladder.transversal[i],b);        
       if  position_a > position_b then
         return false;
       fi;
@@ -102,7 +124,7 @@ end;
 
 
 FindOrbitRep := function( g, k, V, ladder)
-  local result, transv, U, H, ug, tmp, ur, o;
+  local result, transv, U, H, versionSwitchOrbitAlgorithm, gens, acts, gp, tmp, homAct, ug, r, ur;
   result := rec();
   transv := ladder.transversal[k];
   if ladder.subgroupIndex[k-1] < ladder.subgroupIndex[k] then
@@ -112,7 +134,6 @@ FindOrbitRep := function( g, k, V, ladder)
     U := ladder.chain[k-1];
     H := ladder.chain[k];
   fi;
-  ug := RightCoset(U,g);
   ## DEBUG 
   if  not IsSubgroup(H,V) then
     Error("the operating group V is not a subgroup of k-th ladder group");
@@ -121,19 +142,63 @@ FindOrbitRep := function( g, k, V, ladder)
     Error("g is not in the k-th ladder group");
   fi;
   ## DEBUG end 
-  tmp := OrbitStabilizer(V,ug,OnRight);
-  result.stabilizer := tmp.stabilizer;
-  result.orbitRepresentatives := List( tmp.orbit, x -> Representative(x) ); 
-  result.orbitPositions := List( result.orbitRepresentatives, x -> PositionCanonical(transv,x) ); 
-  result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+
+  versionSwitchOrbitAlgorithm := 3;
+
+  ## Orbit Algorithm Version three 
+  if 3 = versionSwitchOrbitAlgorithm then
+    gens := List(GeneratorsOfGroup(V));
+    acts := List(gens, x -> Image(ladder.hom[k],x));
+    gp := PositionCanonical(transv,g);
+    tmp := OrbitStabilizer(V,[1..Size(transv)],gp,gens,acts,OnPoints);
+    result.stabilizer := tmp.stabilizer;
+    result.orbitPositions := List( tmp.orbit ); 
+    result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+
+  ## Orbit Algorithm Version two 
+  elif 2 = versionSwitchOrbitAlgorithm then
+    homAct := function(omega,h)
+      h := Image(ladder.hom[k],h);
+      omega := omega^h;
+      return omega;
+    end;
+    gp := PositionCanonical(transv,g);
+    tmp := OrbitStabilizer(V,gp,homAct);
+    result.stabilizer := tmp.stabilizer;
+    result.orbitPositions := List( tmp.orbit ); 
+    result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+
+  ## Orbit Algorithm Version one
+  else 
+    ug := RightCoset(U,g);
+    tmp := OrbitStabilizer(V,ug,OnRight);
+    result.stabilizer := tmp.stabilizer;
+    result.orbitRepresentatives := List( tmp.orbit, x -> Representative(x) ); 
+    result.orbitPositions := List( result.orbitRepresentatives, x -> PositionCanonical(transv,x) ); 
+    result.orbitRepresentatives := List( result.orbitPositions, x -> transv[x] ); 
+  fi;
+
   result.orbitMinPosition := Minimum(result.orbitPositions);
   result.orbitCanonicalElement := transv[result.orbitMinPosition]; 
-  ur := RightCoset(U,result.orbitCanonicalElement);
-  result.canonizer := RepresentativeAction(V,ug,ur,OnRight);
-  ## DEBUG begin
+
+  ## DEBUG
+  if  not IsSubgroup(V,result.stabilizer) then
+    Error("stabilizer calculation failed");
+  fi;
   if not result.orbitCanonicalElement in H then
     Error("the canonical element is outside of the given range");
   fi;
+  if not g in H then
+    Error("the given element g has changed unintentionally");
+  fi;
+  ## DEBUG end 
+
+  r := result.orbitCanonicalElement;
+  ug := RightCoset(U,g);
+  ur := RightCoset(U,r);
+  result.canonizer := RepresentativeAction(V,ug,ur,OnRight);
+
+  ## DEBUG begin
   if not result.canonizer in V then
     Error("canonizer is not in the operating group"); 
   fi;
@@ -281,7 +346,7 @@ end;
 # If it finds a smaller path it returns a c with A_kpc < A_kp
 # It also calculates the stabilizer of A_kp in B.
 CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
-  local block, i, blockStack, b, isSplitStep, canonizer;
+  local counter, block, i, blockStack, b, isSplitStep, canonizer;
   # Print"\n");
   # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
   # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
@@ -314,14 +379,14 @@ CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
       else
         canonizer := SplitOrbit(block,blockStack,p,k,ladder,false);
       fi;
-      if not canonizer = One(g) then
+      if not canonizer = One(p) then
         return canonizer; 
       fi;
     else
       FuseOrbit(block,blockStack,ladder);
     fi;
   od;
-  return One(g);
+  return One(p);
 end;
 
 
@@ -379,33 +444,6 @@ constructStrongLadder := function(groups)
   return ladder;
 end;
 
-
-
-
-
-makeStandardPermutationLadder := function(n)
-  local groups, gens, i;
-  groups := [SymmetricGroup(n)];
-  groups[2] := Stabilizer(groups[1],1);
-  for i in [ 2 .. n ] do
-    groups[2*i-1] := Stabilizer(groups[2*i-2],i);
-    gens := List(GeneratorsOfGroup(groups[2*i-1]));
-    Add(gens,(1,i));
-    groups[2*i] := Group(gens);
-  od;
-# groups[2*n-1] := SymmetricGroup(n);
-  return constructStrongLadder(groups);;
-end;
-
-
-makeGraphGroup := function(n)
-  local omega, hom;
-  omega := Orbit( SymmetricGroup(n), [1,2], OnSets ); 
-  omega := List(omega);
-  Sort(omega);
-  hom := ActionHomomorphism(SymmetricGroup(n),omega,OnSets);
-  return Image(hom);
-end;
 
 
 
