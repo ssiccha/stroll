@@ -11,7 +11,7 @@ makeStandardPermutationLadder := function(n)
     groups[2*i] := Group(gens);
   od;
 # groups[2*n-1] := SymmetricGroup(n);
-  return constructStrongLadder(groups);;
+  return constructStrongLadder(groups);
 end;
 
 
@@ -101,19 +101,19 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
 end;
 
 
+## This function can be checked against the sequence A008406 in oeis.org.
+## If a_i refers to the number of doublecosets in A_i\A_1/B,
+## the sequence of all a_i with even index is a subsequence of A008406.
 LeiterspielLightGraphGeneration := function(k,n)
-  ## a_i refers to the number of doublecosets in A_i\A_1/B.
-  ## The sequence of all a_i with even index is a subsequence of A008406.
-  ## This can be checked against the sequence A008406 in oeis.org.
-  local ladder, B;
+  local ladder, B, graphs, i;
   ladder := makeStandardPermutationLadder(n*(n-1)/2);
   B := makeGraphGroup(n);
+  graphs := LeiterspielLightDoubleCosets(k,B,ladder);
   for i in [ 1 .. Size(graphs)  ] do 
     if 0 = i mod 2 then 
       Print("Number of canonical coset in A_",i," G B is ",Size(graphs[i]),"\n"); 
     fi; 
   od; 
-  return LeiterspielLightDoubleCosets(k,B,ladder);
 end;
 
 
