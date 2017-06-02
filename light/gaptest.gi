@@ -268,7 +268,7 @@ end;
 # Given the index k, a ladder [A_1,..,A_k] and an element g \in A_1 this function calculates the 
 # smallest strong path of length k, whose last component is the coset A_kg.
 #
-SmallestStrongPathToCoset := function( g, k, ladder )
+SmallestStrongPathToCoset := function(g,k,ladder)
   local z, U, zi, i, b, stab, tmp, h;
   h := g;
   z := One(ladder.G);
@@ -305,6 +305,7 @@ end;
 
 
 
+
 NextStroLLStep := 0;
 SplitOrbit := 0;
 FuseOrbit := 0;
@@ -315,10 +316,10 @@ CheckCanonicalStroll := 0;
 # A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
 SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
   local z, U, tmp, result;
-  if not g*p^-1 in ladder.chain[i-1] then
+  z := ladder.PathRepresentative( p, i-1 );
+  if not g*z^-1 in ladder.chain[i-1] then
     Error("the Element g must be in the ladder group A_{i-1}p");
   fi;
-  z := ladder.PathRepresentative( p, i-1 );
   g := g*z^-1;
   U := ConjugateGroup( ladder.C[i-1], z^-1 );
   tmp := FindOrbitRep( g, i, U, ladder );
@@ -332,13 +333,13 @@ end;
 # A_i <= A_{i-1} and a and b are in the preimage of A_{i-1}p;
 LowerOrEqualInStabilizerOf_p := function( a, b, i, p, ladder )
   local z, position_a, position_b;
-  if not a*p^-1 in ladder.chain[i-1] then
-    Error("the Element a must be in A_{i-1}p");
-  fi;
-  if not b*p^-1 in ladder.chain[i-1] then
-    Error("the Element b must be in A_{i-1}p");
-  fi;
   z := ladder.PathRepresentative(p,i-1);
+  if not a*z^-1 in ladder.chain[i-1] then
+    Error("the Element a must be in the ladder group A_{i-1}p");
+  fi;
+  if not b*z^-1 in ladder.chain[i-1] then
+    Error("the Element b must be in the ladder group A_{i-1}p");
+  fi;
   position_a := PositionCanonical(ladder.transversal[i],a*z^-1);        
   position_b := PositionCanonical(ladder.transversal[i],b*z^-1);        
   if position_a <= position_b then
@@ -352,25 +353,49 @@ end;
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 SplitOrbit := function( block, blockStack, p, k, ladder, debug)
-  local g, b, i, preimage, c, tmp, newBlock, h;
+  local g, b, i, z, preimage, c, tmp, newBlock, h;
   g := block.g;
   b := block.b;
   i := block.i;
+  z := ladder.PathRepresentative(p,i);
+  if debug = true then
+    Print("\nDebug Mode\n");
+    Print("p = ",p,"\n");
+    Print("C = ",ladder.C[i],"\n");
+  fi;
   # preimage is a transversal of E[k][i+1]\E[k][i];
   preimage := ladder.E_ij_transversal[k][i+1]; 
   for h in preimage do
-    if Size(ladder.C[i+1]) = Size(ladder.C[i]) then
-      c := One(g);
+    if debug = true then
+      Print("durchlaufe mit h*g = ",h*g,"\n");  
+      Print("durchlaufe mit h*g*b = ",h*g*b,"\n");  
+    fi;
+    ## DEBUG 
+    if  not h*g*b*z^-1 in ladder.chain[i] then
+      Error("h*g*b*z^-1 is not in A_i");
+    fi;
+    ## DEBUG end
+    ## this optimisation is experimental and must be checked
+    ## opimisation begin 
+    if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
+      c := One(p); 
     else
       tmp := SmallestOrbitRepresentativeInStabilizerOf_p( h*g*b, i+1, p, ladder );
       c := tmp.canonizer;
     fi;
+    ## opimisation end
+    ## DEBUG 
+    if not h*g*b*c*z^-1 in ladder.chain[i] then
+      Error("the canonical orbit representative is not in A_i");
+    fi;
+    ## DEBUG end
     if false = LowerOrEqualInStabilizerOf_p( p, h*g*b*c, i+1, p, ladder) then
       return b*c;
     elif false = LowerOrEqualInStabilizerOf_p( h*g*b*c, p, i+1, p, ladder) then
       continue;
     fi;
     newBlock := rec( g := h*g, b := b*c, i := i+1 );
+    # Print "newBlock ", newBlock, "\n" );
     StackPush(blockStack,newBlock);
   od;
   return One(p); 
@@ -385,7 +410,7 @@ FuseOrbit := function( block, blockStack, ladder )
   b := block.b;
   ## this optimisation is experimental and must be checked
   ## opimisation begin 
-  if Size(ladder.C[i]) = Size(ladder.C[i-1]) then
+  if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
     return;
