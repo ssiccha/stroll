@@ -353,49 +353,28 @@ end;
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 SplitOrbit := function( block, blockStack, p, k, ladder, debug)
-  local g, b, i, z, preimage, c, tmp, newBlock, h;
+  local g, b, i, preimage, c, tmp, newBlock, h;
   g := block.g;
   b := block.b;
   i := block.i;
-  z := ladder.PathRepresentative(p,i);
-  if debug = true then
-    Print("\nDebug Mode\n");
-    Print("p = ",p,"\n");
-    Print("C = ",ladder.C[i],"\n");
-  fi;
   # preimage is a transversal of E[k][i+1]\E[k][i];
   preimage := ladder.E_ij_transversal[k][i+1]; 
   for h in preimage do
-    if debug = true then
-      Print("durchlaufe mit h*g = ",h*g,"\n");  
-      Print("durchlaufe mit h*g*b = ",h*g*b,"\n");  
-    fi;
-    ## DEBUG 
-    if  not h*g*b*z^-1 in ladder.chain[i] then
-      Error("h*g*b*z^-1 is not in A_i");
-    fi;
-    ## DEBUG end
     ## this optimisation is experimental and must be checked
     ## opimisation begin 
-    if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
-      c := One(p); 
+    if Size(ladder.C[i+1]) = Size(ladder.C[i]) then
+      c := One(g);
     else
       tmp := SmallestOrbitRepresentativeInStabilizerOf_p( h*g*b, i+1, p, ladder );
       c := tmp.canonizer;
     fi;
     ## opimisation end
-    ## DEBUG 
-    if not h*g*b*c*z^-1 in ladder.chain[i] then
-      Error("the canonical orbit representative is not in A_i");
-    fi;
-    ## DEBUG end
     if false = LowerOrEqualInStabilizerOf_p( p, h*g*b*c, i+1, p, ladder) then
       return b*c;
     elif false = LowerOrEqualInStabilizerOf_p( h*g*b*c, p, i+1, p, ladder) then
       continue;
     fi;
     newBlock := rec( g := h*g, b := b*c, i := i+1 );
-    # Print "newBlock ", newBlock, "\n" );
     StackPush(blockStack,newBlock);
   od;
   return One(p); 
