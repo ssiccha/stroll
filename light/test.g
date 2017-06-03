@@ -58,9 +58,6 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
     coset := StackPop(cosetStack);
     g := coset.g;
     i := coset.i+1;
-    if  i = k then
-      continue;
-    fi;
     stab := coset.stabilizer;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
       for h in ladder.transversal[i] do
@@ -94,7 +91,11 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       fi;
       coset := rec(g := g, stabilizer := ladder.C[i], i := i);
       Add(L[i],coset);
-      StackPush(cosetStack,coset);
+      if  i = k then
+        continue;
+      else
+        StackPush(cosetStack,coset);
+      fi;
     fi; 
   od;
   return L;
@@ -114,6 +115,7 @@ LeiterspielLightGraphGeneration := function(k,n)
       Print("Number of canonical coset in A_",i," G B is ",Size(graphs[i]),"\n"); 
     fi; 
   od; 
+  return graphs;
 end;
 
 

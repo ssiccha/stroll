@@ -1,3 +1,4 @@
+LoadPackage("orb");
 Reread("stack.gd");
 Read("stack.gi");
 Read("gaptest.gi");
