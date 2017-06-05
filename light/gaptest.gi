@@ -303,10 +303,8 @@ end;
 
 
 
-NextStroLLStep := 0;
 SplitOrbit := 0;
 FuseOrbit := 0;
-CheckCanonicalStroll := 0;
 
 
 
@@ -329,33 +327,29 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
   
   # if p has changed, delete old data storage
   if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-    z := ladder.PathRepresentative( p, i-1 );
-    if not p = Position(ladder.p,i-1) then
-      ladder.p[i-1] := p;
-      ladder.z[i-1] := z; 
+    if fail = Position(ladder.p,i) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
+      ladder.p[i] := p;
+      ladder.z[i] := ladder.PathRepresentative( p, i-1 ); 
       ladder.orbits[i] := [];
       ladder.min[i] := [];
-      z := ladder.z[i-1];
-      U := ConjugateGroup( ladder.C[i-1], z^-1 );
+      U := ConjugateGroup( ladder.C[i-1], ladder.z[i]^-1 );
       ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
       ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
     fi;
   else
-    z := ladder.PathRepresentative( p, i );
-    if not p = Position(ladder.p,i) then
+    if fail = Position(ladder.p,i) or not ladder.p[i]*p^-1 in ladder.chain[i] then
       ladder.p[i] := p;
-      ladder.z[i] := z; 
+      ladder.z[i] := ladder.PathRepresentative( p, i ); 
       ladder.orbits[i] := [];
       ladder.min[i] := [];
-      z := ladder.z[i];
-      U := ConjugateGroup( ladder.C[i], z^-1 );
+      U := ConjugateGroup( ladder.C[i], ladder.z[i]^-1 );
       ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
       ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
     fi;
-    z := ladder.z[i];
   fi;
 
   # initialize g and pos 
+  z := ladder.z[i];
   g := g*z^-1;
   pos := PositionCanonical(ladder.transversal[i],g);
 
@@ -474,32 +468,27 @@ SplitOrbit := function( block, blockStack, p, k, ladder )
 end;
 
 # Several A_ig yield the same A_{i+1}g.
-# FuseOrbit only puts one of these g onto the stack
-FuseOrbit := function( block, blockStack, ladder )
-  local g, i, b, z, U, tmp;
+# FuseOrbit only puts exactly one of them onto the stack
+FuseOrbit := function( block, blockStack, p, ladder )
+  local g, i, b, z, c;
   g := block.g;
   i := block.i;
   b := block.b;
-  ## this optimisation is experimental and must be checked
-  ## opimisation begin 
   if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
     return;
   fi;
-  ## opimisation end
   ## TODO is this performance relevant?
-  z := SmallestStrongPathToCoset(g,i+1,ladder);
-  U := ConjugateGroup(ladder.C[i+1],b^-1*z^-1);
-  tmp := FindOrbitRep( g*z^-1, i+1, U, ladder);
-  # A_ig*z^-1 = A_i*tmp.orbitCanonicalElement ?
-  # to prevent double processing of the same block,
-  # the block is processed if and only if A_ig = A_iz
-  # if g*z^-1 in ladder.chain[i] then
-  if g*z^-1*tmp.orbitCanonicalElement^-1 in ladder.chain[i] then
+  # z := SmallestStrongPathToCoset(g,i+1,ladder);
+  z := CanonicalRightCosetElement(ladder.chain[i+1],g);
+  c := SmallestOrbitRepresentativeInStabilizerOf_p( g*(z^-1)*p, i+1, p, ladder );
+  # prevent double processing:
+  # the block is processed if and only if 
+  # A_ig*z^-1*p is smallest in its orbit under the action of ladder.C[i+1]?
+  if One(p) = c then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
-    # Print "newBlock ", block, "\n" );
   fi;
 end;
 
@@ -532,12 +521,53 @@ CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
         return canonizer; 
       fi;
     else
-      FuseOrbit(block,blockStack,ladder);
+      FuseOrbit(block,blockStack,p,ladder);
     fi;
   od;
   return One(p);
 end;
 
+
+
+CheckSmallestInDoubleCosetSplit := function( i, p, ladder) 
+  local z, U, tmp, c;
+  # A_ipz^-1c is smallest in its C_{i-1} orbit
+  z := ladder.PathRepresentative(p,i-1);
+  U := ConjugateGroup(ladder.C[i-1],z^-1);
+  tmp := FindOrbitRep( p*z^-1, i, U, ladder );
+  c := tmp.canonizer;
+  # A_ipz^-1 = A_ipz^-1c
+  if not (p*z^-1*c)*(p*z^-1)^-1 in ladder.chain[i] then
+    return c^z;
+  fi;
+  ladder.C[i] := ConjugateGroup(tmp.stabilizer,z);
+  return One(p);
+end;
+
+
+
+FindSmallerOrbitRepresentative := function(g, k, ladder, B)
+  local result, stabilizer, p, canonizer, i;
+  ladder.C := [B];
+  result := rec(isCanonical := false, 
+                canonizer := One(g), 
+                stabilizer := Group(One(g)));
+  p := SmallestStrongPathToCoset(g,k,ladder);
+  for i in [ 2 .. k ] do
+    if  ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i]  then
+      canonizer := CheckSmallestInDoubleCosetSplit(i,p,ladder); 
+    else
+      canonizer := CheckSmallestInDoubleCosetFuse(i,p,ladder);
+    fi;
+    if not canonizer = One(canonizer) then
+      result.canonizer := canonizer;
+      return result; 
+    fi;
+  od;
+  result.isCanonical := true;
+  result.stabilizer := ladder.C[k];
+  return result;
+end;
 
 
 
