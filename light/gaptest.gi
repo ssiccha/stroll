@@ -312,79 +312,96 @@ CheckCanonicalStroll := 0;
 
 # A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
 SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
-  local z, pos, min, pnt, word, canonizer, U, gensPreimage, gensImage, isPointStabilizer, options, orbit, j;
+  local z, pos, isInOrbit, min, U, gensPreimage, gensImage, isPointStabilizer, canonizer, options, orbit, pnt, word, j;
+  if i = 1 then
+    return One(p); 
+  fi;
+  # initialize data storage
   if not IsBound(ladder.p) then
     ladder.p := [];
     ladder.z := [];
     ladder.orbits := [];
     ladder.min := [];
+    ladder.gensOfStab := [];
+    ladder.homImageGensOfStab := [];
   fi;
-  if not p = Position(ladder.p,i) then
-    ladder.p[i] := p;
-    ladder.z[i] := ladder.PathRepresentative( p, i-1 );
+  # if p has changed, delete old data storage
+  if not p = Position(ladder.p,i-1) then
+    ladder.p[i-1] := p;
+    ladder.z[i-1] := ladder.PathRepresentative( p, i-1 );
     ladder.orbits[i] := [];
     ladder.min[i] := [];
+    z := ladder.z[i-1];
+    U := ConjugateGroup( ladder.C[i-1], z^-1 );
+    ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+    ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
   fi;
-  z := ladder.z[i];
+  # initialize z, g and pos 
+  z := ladder.z[i-1];
   g := g*z^-1;
   if not g in ladder.chain[i-1] then
     Error("the Element g must be in the ladder group A_{i-1}p");
   fi;
   pos := PositionCanonical(ladder.transversal[i],g);
-  # check, if element is one of the known orbits
-  for orbit in [ 1 .. Size(ladder.orbits[i]) ] do
+  # check, if element is in one of the known orbits
+  isInOrbit := false;
+  for j in [ 1 .. Size(ladder.orbits[i]) ] do
+    orbit := ladder.orbits[i][j];
     if pos in orbit then
-      min := ladder.min[i][j];
-      pnt := Position(orbit,pos);
-      word := TraceSchreierTreeForward(orbit,pnt);
-      word := List(word, x -> gensPreimage[x]);
-      # canonizer maps pos on starting point of orbit 
-      canonizer := Product(word)^-1;
-      pnt := Position(orbit,min);
-      word := TraceSchreierTreeForward(orbit,pnt);
-      word := List(word, x -> gensPreimage[x]);
-      # canonizer maps pos on min
-      canonizer := canonizer*Product(word);
-      return canonizer^z;
+      isInOrbit := true;
+      break;
     fi;
   od;   
   # element is not in one of the known orbits
-  U := ConjugateGroup( ladder.C[i-1], z^-1 );
-  gensPreimage := List(GeneratorsOfGroup(U)); 
-  gensImage := List(gensPreimage, x -> Image(ladder.hom[i],x)); 
-  isPointStabilizer := true;
-  for j in gensImage do
-    if not pos^j = pos then
-      isPointStabilizer := false; 
-      break;
-    fi; 
-  od;
-  canonizer := One(p);
-  if isPointStabilizer then
-    return canonizer;
+  if isInOrbit then
+    min := ladder.min[i][j];
+  else
+    # build up new orbit
+    gensImage := ladder.homImageGensOfStab[i]; 
+    isPointStabilizer := true;
+    for j in gensImage do
+      if not pos^j = pos then
+        isPointStabilizer := false; 
+        break;
+      fi; 
+    od;
+    if not isPointStabilizer then
+      options := rec();
+      options.grpsizebound := Size(ladder.C[i-1]);
+      options.orbsizebound := Size(ladder.transversal[i]);
+      options.schreier := true;
+      options.storenumbers := true;
+      orbit := Orb(gensImage,pos,OnPoints,options);
+      Enumerate(orbit);
+      min := pos;
+      for j in orbit do
+        if  min > j then
+          min := j; 
+        fi; 
+      od;
+      Add(ladder.orbits[i],orbit);
+      Add(ladder.min[i],min);
+    else
+      min := pos;
+      Add(ladder.orbits[i],[pos]);
+      Add(ladder.min[i],pos);
+    fi;
   fi;
-  options := rec();
-#   options.orbitgraph := true;
-  options.grpsizebound := Size(ladder.C[i-1]);
-  options.orbsizebound := Size(ladder.transversal[i]);
-  options.schreier := true;
-  options.storenumbers := true;
-#   options.stabsizebound := Size(ladder.C[i]);
-  orbit := Orb(gensImage,pos,OnPoints,options);
-  Enumerate(orbit);
-  min := pos;
-  for j in orbit do
-    if  min > j then
-      min := j; 
-    fi; 
-  od;
-  Add(ladder.orbits[i],orbit);
-  Add(ladder.min[i],min);
+  # find canonizing element
+  canonizer := One(p);
   if not min = pos then
+    # find mapping of pos on starting point of orbit 
+    gensPreimage := ladder.gensOfStab[i]; 
+    pnt := Position(orbit,pos);
+    word := TraceSchreierTreeForward(orbit,pnt);
+    word := List(word, x -> gensPreimage[x]);
+    canonizer := Product(word)^-1;
+    # find mapping of pos on min 
     pnt := Position(orbit,min);
     word := TraceSchreierTreeForward(orbit,pnt);
     word := List(word, x -> gensPreimage[x]);
-    canonizer := Product(word)^z;
+    canonizer := canonizer*Product(word);
+    canonizer := canonizer^z;
   fi;
   if not canonizer^(z^-1) in ladder.chain[i-1] then
     Error("the Element canonizer must be in the ladder group A_{i-1}");
