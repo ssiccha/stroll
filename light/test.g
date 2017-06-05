@@ -68,7 +68,9 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
         if One(g) = canonizer then
           coset := rec(g := h*g, stabilizer := ladder.C[i],i := i);
           Add(L[i],coset);
-          StackPush(cosetStack,coset);
+          if not i = k then
+            StackPush(cosetStack,coset);
+          fi;
         fi;
       od;
     else
@@ -91,9 +93,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       fi;
       coset := rec(g := g, stabilizer := ladder.C[i], i := i);
       Add(L[i],coset);
-      if  i = k then
-        continue;
-      else
+      if not i = k then
         StackPush(cosetStack,coset);
       fi;
     fi; 

@@ -291,9 +291,6 @@ SmallestStrongPathToCoset := function(g,k,ladder)
       h := h*zi^-1;
       stab := ConjugateGroup(stab,zi^-1);
       z := zi*z;
-      # Print("h = ",h,"\n");
-      # Print("b = ",b,"\n");
-      # Print("zi = ",zi,"\n\n");
       if  not h*z*g^-1 in ladder.chain[k] then
         ## DEBUG !!!
         Error("A_kh*z <> A_kg \nargument g = ",g,"\nargument k = ",k,"\n"); 
@@ -424,7 +421,7 @@ end;
 
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
-SplitOrbit := function( block, blockStack, p, k, ladder, debug)
+SplitOrbit := function( block, blockStack, p, k, ladder )
   local g, b, i, preimage, c, tmp, newBlock, h;
   g := block.g;
   b := block.b;
@@ -464,6 +461,9 @@ FuseOrbit := function( block, blockStack, ladder )
   U := ConjugateGroup(ladder.C[i+1],b^-1*z^-1);
   tmp := FindOrbitRep( g*z^-1, i+1, U, ladder);
   # A_ig*z^-1 = A_i*tmp.orbitCanonicalElement ?
+  # to prevent double processing of the same block,
+  # the block is processed if and only if A_ig = A_iz
+  # if g*z^-1 in ladder.chain[i] then
   if g*z^-1*tmp.orbitCanonicalElement^-1 in ladder.chain[i] then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
@@ -479,11 +479,6 @@ end;
 # It also calculates the stabilizer of A_kp in B.
 CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
   local counter, block, i, blockStack, b, isSplitStep, canonizer;
-  # Print"\n");
-  # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
-  # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
-  # Print" ---- ---- ---- ", k, " ---- ---- ----\n");
-  # Print"\n");
   counter := 0;
   ladder.C[k] := ladder.C[k-1];
   block := rec( g := p, b := One(p), i := 1);
@@ -491,26 +486,16 @@ CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
   StackPush( blockStack, block);
   while not StackIsEmpty(blockStack) do
     counter := counter + 1;
-    # Print "----------- counter = ", counter, "-----------\n" );
     block := StackPop(blockStack);
-    # Print "Pop: ", block, "\n" );
     i := block.i;
     b := block.b;
     if i+1 = k then
-      # Print"Stabilizer size before: ", Size(ladder.C[i+1]), "\n");
       ladder.C[i+1] := ClosureGroup(ladder.C[i+1],b);
-      # Print"After: ", Size(ladder.C[i+1]), "\n");
       continue;
     fi;
     isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
     if isSplitStep then
-      ## DEBUG 
-      if  counter = 1000 and k = 8 then
-        canonizer := SplitOrbit(block,blockStack,p,k,ladder,true);
-        Error("break");
-      else
-        canonizer := SplitOrbit(block,blockStack,p,k,ladder,false);
-      fi;
+      canonizer := SplitOrbit(block,blockStack,p,k,ladder);
       if not canonizer = One(p) then
         return canonizer; 
       fi;
@@ -521,47 +506,6 @@ CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
   return One(p);
 end;
 
-
-
-CheckSmallestInDoubleCosetSplit := function( i, p, ladder) 
-  local z, U, tmp, c;
-  # A_ipz^-1c is smallest in its C_{i-1} orbit
-  z := ladder.PathRepresentative(p,i-1);
-  U := ConjugateGroup(ladder.C[i-1],z^-1);
-  tmp := FindOrbitRep( p*z^-1, i, U, ladder );
-  c := tmp.canonizer;
-  # A_ipz^-1 = A_ipz^-1c
-  if not (p*z^-1*c)*(p*z^-1)^-1 in ladder.chain[i] then
-    return c^z;
-  fi;
-  ladder.C[i] := ConjugateGroup(tmp.stabilizer,z);
-  return One(p);
-end;
-
-
-
-FindSmallerOrbitRepresentative := function(g, k, ladder, B)
-  local result, stabilizer, p, canonizer, i;
-  ladder.C := [B];
-  result := rec(isCanonical := false, 
-                canonizer := One(g), 
-                stabilizer := Group(One(g)));
-  p := SmallestStrongPathToCoset(g,k,ladder);
-  for i in [ 2 .. k ] do
-    if  ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i]  then
-      canonizer := CheckSmallestInDoubleCosetSplit(i,p,ladder); 
-    else
-      canonizer := CheckSmallestInDoubleCosetFuse(i,p,ladder);
-    fi;
-    if not canonizer = One(canonizer) then
-      result.canonizer := canonizer;
-      return result; 
-    fi;
-  od;
-  result.isCanonical := true;
-  result.stabilizer := ladder.C[k];
-  return result;
-end;
 
 
 
