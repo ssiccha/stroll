@@ -45,7 +45,7 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local cosetStack, coset, stabilizer, i, L, g, stab, canonizer, z, c, h;
+  local coset, stabilizer, L, cosetStack, g, i, stab, canonizer, result, z, U, tmp, h;
   ladder.C := [B];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
@@ -77,15 +77,9 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # If p is the smallest path to A_ip, then 
       # A_ig should be constructed from the coset A_{i-1}p.
       # So the check for canonity can be done with this z: 
-      # z := SmallestStrongPathToCoset(g,i-1,ladder);
-      # g := SmallestStrongPathToCoset(g,i,ladder);
-      # For Performance reason use CanonicalRightCosetElement
-      z := CanonicalRightCosetElement(ladder.chain[i-1],g);
-      c := SmallestOrbitRepresentativeInStabilizerOf_p( z, i, g, ladder );
-      # prevent double processing:
-      # the block is processed if and only if 
-      # A_iz is in the orbit of A_ig under the action of ladder.C[i+1]?
-      if not z*c*g^-1 in ladder.chain[i-1] then
+      z := SmallestStrongPathToCoset(g,i-1,ladder);
+      g := SmallestStrongPathToCoset(g,i,ladder);
+      if not g*z^-1 in ladder.chain[i-1] then
         continue;
       fi;
       # the stabilizer ladder.C[i-1] could have been overwritten in 
@@ -111,17 +105,26 @@ end;
 ## This function can be checked against the sequence A008406 in www.oeis.org.
 ## If a_i refers to the number of doublecosets in A_i\A_1/B,
 ## the sequence of all a_i with even index is a subsequence of A008406.
-LeiterspielLightGraphGeneration := function(k,n)
-  local ladder, B, graphs, i;
+LeiterspielLightGraphGeneration := function(n,k)
+  local ladder, B, graphs, sum, i;
+  if k < 2 or n < 3 then
+    return;
+  fi;
+  Print("Constructing all graphs on ",n," vertices with up to ",k," edges:\n");
   ladder := makeStandardPermutationLadder(n*(n-1)/2);
   B := makeGraphGroup(n);
-  graphs := LeiterspielLightDoubleCosets(k,B,ladder);
+  graphs := LeiterspielLightDoubleCosets(k*2-1,B,ladder);
+  sum := 0;
   for i in [ 1 .. Size(graphs)  ] do 
     if 0 = i mod 2 then 
-      Print("Number of canonical coset in A_",i," G B is ",Size(graphs[i]),"\n"); 
+      Print(Size(graphs[i])," graphs with ",i/2," edges\n"); 
+      sum := sum + Size(graphs[i]);
+      # else 
+      # Print(Size(graphs[i])," graphs with ",(i-1)/2," equal and one distinct edge\n"); 
     fi; 
-  od; 
-  return graphs;
+  od;
+  Print("\n",sum," graphs on ",n," vertices with up to ",k," edges\n"); 
+  # return graphs;
 end;
 
 
