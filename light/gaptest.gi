@@ -56,10 +56,11 @@ buildStroLLTransversals := function(groups)
   ladder.intersection := [groups[1]];
   for i in [2 .. Size(groups)] do
     U := groups[i];
+    index := IndexNC(ladder.G,U);
+    ladder.subgroupIndex[i] := index;
     if true = IsSubgroup(U,groups[i-1]) then
       # the previous group is a subgroup of group[i]
-      index := IndexNC(U,groups[i-1]);
-      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/index;
+
       ladder.intersection[i] := ladder.intersection[i-1];
       ladder.transversal[i] := RightTransversal(U,ladder.chain[i-1]);
       ladder.rightcosets[i] := RightCosets(U,ladder.chain[i-1]);
@@ -67,10 +68,9 @@ buildStroLLTransversals := function(groups)
 #     ladder.hom[i] := ActionHomomorphism(U,ladder.transversal[i],OnRight);
     elif true = IsSubgroup(groups[i-1],U) then
       # group[i] is a subgroup of the previous group
-      index := IndexNC(groups[i-1],U);
-      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*index;
+
       ladder.intersection[i] := Intersection(U,ladder.intersection[i-1]);
-      ladder.transversal[i] := RightTransversal(ladder.intersection[i-1],ladder.intersection[i]);
+      ladder.transversal[i] := RightTransversal(ladder.chain[i-1],U);
       ladder.rightcosets[i] := RightCosets(ladder.chain[i-1],U);
       ladder.hom[i] := FactorCosetAction(ladder.chain[i-1],U);
     else

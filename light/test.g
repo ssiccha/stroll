@@ -106,25 +106,27 @@ end;
 ## If a_i refers to the number of doublecosets in A_i\A_1/B,
 ## the sequence of all a_i with even index is a subsequence of A008406.
 LeiterspielLightGraphGeneration := function(n,k)
-  local ladder, B, graphs, sum, i;
+  local ladder, B, cosets, sum, graphs, i;
   if k < 2 or n < 3 then
     return;
   fi;
   Print("Constructing all graphs on ",n," vertices with up to ",k," edges:\n");
   ladder := makeStandardPermutationLadder(n*(n-1)/2);
   B := makeGraphGroup(n);
-  graphs := LeiterspielLightDoubleCosets(k*2-1,B,ladder);
+  cosets := LeiterspielLightDoubleCosets(k*2-1,B,ladder);
   sum := 0;
-  for i in [ 1 .. Size(graphs)  ] do 
+  graphs := [Size(cosets[1])];
+  for i in [ 1 .. Size(cosets)  ] do 
     if 0 = i mod 2 then 
-      Print(Size(graphs[i])," graphs with ",i/2," edges\n"); 
-      sum := sum + Size(graphs[i]);
-      # else 
-      # Print(Size(graphs[i])," graphs with ",(i-1)/2," equal and one distinct edge\n"); 
+      graphs[i/2] := Size(cosets[i]);
     fi; 
   od;
+  for i in [ 1 .. Size(graphs)  ] do 
+    sum := sum + graphs[i];
+    Print(graphs[i]," graphs with ",i," edges\n"); 
+  od;
   Print("\n",sum," graphs on ",n," vertices with up to ",k," edges\n"); 
-  # return graphs;
+  # return cosets;
 end;
 
 
