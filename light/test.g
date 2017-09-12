@@ -45,7 +45,7 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local coset, stabilizer, L, cosetStack, g, i, stab, canonizer, result, z, U, tmp, h;
+  local cosetStack, coset, stabilizer, i, L, g, stab, canonizer, z, c, h;
   ladder.C := [B];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
@@ -62,8 +62,8 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
       for h in ladder.transversal[i] do
         # stab is more efficient then B
-#       ladder.C[i-1] := stab;
-#       z := SmallestStrongPathToCoset(h*g,i,ladder);
+        # ladder.C[i-1] := stab;
+        # z := SmallestStrongPathToCoset(h*g,i,ladder);
         canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,ladder);
         if One(g) = canonizer then
           coset := rec(g := h*g, stabilizer := ladder.C[i],i := i);
@@ -77,9 +77,15 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # If p is the smallest path to A_ip, then 
       # A_ig should be constructed from the coset A_{i-1}p.
       # So the check for canonity can be done with this z: 
-      z := SmallestStrongPathToCoset(g,i-1,ladder);
-      g := SmallestStrongPathToCoset(g,i,ladder);
-      if not g*z^-1 in ladder.chain[i-1] then
+      # z := SmallestStrongPathToCoset(g,i-1,ladder);
+      # g := SmallestStrongPathToCoset(g,i,ladder);
+      # For Performance reason use CanonicalRightCosetElement
+      z := CanonicalRightCosetElement(ladder.chain[i-1],g);
+      c := SmallestOrbitRepresentativeInStabilizerOf_p( z, i, g, ladder );
+      # prevent double processing:
+      # the block is processed if and only if 
+      # A_iz is in the orbit of A_ig under the action of ladder.C[i+1]?
+      if not z*c*g^-1 in ladder.chain[i-1] then
         continue;
       fi;
       # the stabilizer ladder.C[i-1] could have been overwritten in 
@@ -102,7 +108,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
 end;
 
 
-## This function can be checked against the sequence A008406 in oeis.org.
+## This function can be checked against the sequence A008406 in www.oeis.org.
 ## If a_i refers to the number of doublecosets in A_i\A_1/B,
 ## the sequence of all a_i with even index is a subsequence of A008406.
 LeiterspielLightGraphGeneration := function(k,n)

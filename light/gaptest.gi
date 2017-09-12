@@ -303,10 +303,6 @@ end;
 
 
 
-SplitOrbit := 0;
-FuseOrbit := 0;
-
-
 
 # A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
 SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
