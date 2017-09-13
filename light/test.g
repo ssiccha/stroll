@@ -125,7 +125,11 @@ LeiterspielLightGraphGeneration := function(n,k)
     sum := sum + graphs[i];
     Print(graphs[i]," graphs with ",i," edges\n"); 
   od;
-  Print("\n",sum," graphs on ",n," vertices with up to ",k," edges\n"); 
+  Print("\n"); 
+  for i in [ 1 .. Size(graphs)  ] do 
+    Print(graphs[i],","); 
+  od;
+  Print("\n\n",sum," graphs on ",n," vertices with up to ",k," edges\n"); 
   # return cosets;
 end;
 

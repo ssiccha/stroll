@@ -56,11 +56,10 @@ buildStroLLTransversals := function(groups)
   ladder.intersection := [groups[1]];
   for i in [2 .. Size(groups)] do
     U := groups[i];
-    index := IndexNC(ladder.G,U);
-    ladder.subgroupIndex[i] := index;
     if true = IsSubgroup(U,groups[i-1]) then
       # the previous group is a subgroup of group[i]
-
+      index := IndexNC(U,groups[i-1]);
+      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/index;
       ladder.intersection[i] := ladder.intersection[i-1];
       ladder.transversal[i] := RightTransversal(U,ladder.chain[i-1]);
       ladder.rightcosets[i] := RightCosets(U,ladder.chain[i-1]);
@@ -68,8 +67,10 @@ buildStroLLTransversals := function(groups)
 #     ladder.hom[i] := ActionHomomorphism(U,ladder.transversal[i],OnRight);
     elif true = IsSubgroup(groups[i-1],U) then
       # group[i] is a subgroup of the previous group
-
+      index := IndexNC(groups[i-1],U);
+      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*index;
       ladder.intersection[i] := Intersection(U,ladder.intersection[i-1]);
+      # ladder.transversal[i] := RightTransversal(ladder.intersection[i-1],ladder.intersection[i]);
       ladder.transversal[i] := RightTransversal(ladder.chain[i-1],U);
       ladder.rightcosets[i] := RightCosets(ladder.chain[i-1],U);
       ladder.hom[i] := FactorCosetAction(ladder.chain[i-1],U);
@@ -360,8 +361,7 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
   
   # if p has changed, delete old data storage
   if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-    # why Position(ladder.p,i) is used? Is this an Error?
-    if fail = Position(ladder.p,i) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
+    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
       ladder.p[i] := p;
       ladder.z[i] := ladder.PathRepresentative( p, i-1 ); 
       ladder.orbits[i] := [];
@@ -371,7 +371,7 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
       ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
     fi;
   else
-    if fail = Position(ladder.p,i) or not ladder.p[i]*p^-1 in ladder.chain[i] then
+    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i] then
       ladder.p[i] := p;
       ladder.z[i] := ladder.PathRepresentative( p, i ); 
       ladder.orbits[i] := [];
@@ -441,20 +441,26 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
   canonizer := One(p);
   gensPreimage := ladder.gensOfStab[i]; 
   if not orbit[1] = pos then
-    # find mapping of pos on starting point of orbit 
+    # find mapping of pos on orbit[1] 
     pnt := Position(orbit,pos);
     word := TraceSchreierTreeForward(orbit,pnt);
     word := List(word, x -> gensPreimage[x]);
-    canonizer := Product(word)^-1;
-    canonizer := canonizer^z;
+    word := Product(word)^-1;
+    canonizer := word^z;
   fi;
-  if not min = pos then
-    # find mapping of pos on min 
+  if not min = orbit[1] then
+    # find mapping of orbit[1] on min 
     pnt := Position(orbit,min);
     word := TraceSchreierTreeForward(orbit,pnt);
     word := List(word, x -> gensPreimage[x]);
     canonizer := canonizer*Product(word)^z;
   fi;
+  ### DEBUG start ###
+# pos := PositionCanonical(ladder.transversal[i],g*canonizer);
+# if not pos = min then
+#   Error("path in function SmallestOrbitRepresentativeInStabilizerOf_p is not correct");
+# fi; 
+  ### DEBUG end ###
   return canonizer;
 end;
 
