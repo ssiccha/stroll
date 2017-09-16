@@ -45,7 +45,7 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local coset, stabilizer, L, cosetStack, g, i, stab, canonizer, result, z, U, tmp, h;
+  local cosetStack, coset, stabilizer, i, L, g, stab, canonizer, z, cut, h;
   ladder.C := [B];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
@@ -82,9 +82,10 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       if not g*z^-1 in ladder.chain[i-1] then
         continue;
       fi;
-      # the stabilizer ladder.C[i-1] could have been overwritten in 
-      # another branch. 
-      # In an depth first search algorithm the other stabilizers stay unchanged.
+      # In a breadth first search algorithm the stabilizer ladder.C[i-1] 
+      # could have been overwritten.
+      # This is a depth first search algorithm so the stabilizers stay unchanged.
+      # For performance reasons delete the next line and check results
       ladder.C[i-1] := coset.stabilizer;
       canonizer := CheckSmallestInDoubleCosetFuse(i,g,ladder);
       if not One(g) = canonizer then
@@ -93,6 +94,12 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       fi;
       coset := rec(g := g, stabilizer := ladder.C[i], i := i);
       Add(L[i],coset);
+      #### DEBUG begin ####
+      cut := Intersection(B^(g^-1),ladder.chain[i]);
+      if not Size(coset.stabilizer) = Size(cut) then
+        Error("\nstabilizer sizes are not equal\n g = ",g," Size(stabilizer) = ",Size(coset.stabilizer)," Size(cut) = ",Size(cut)," stabilizer = ",coset.stabilizer,"\n\n");
+      fi;
+      #### DEBUG end ####
       if not i = k then
         StackPush(cosetStack,coset);
       fi;
@@ -113,7 +120,7 @@ LeiterspielLightGraphGeneration := function(n,k)
   Print("Constructing all graphs on ",n," vertices with up to ",k," edges:\n");
   ladder := makeStandardPermutationLadder(n*(n-1)/2);
   B := makeGraphGroup(n);
-  cosets := LeiterspielLightDoubleCosets(k*2-1,B,ladder);
+  cosets := LeiterspielLightDoubleCosets(k*2,B,ladder);
   sum := 0;
   graphs := [Size(cosets[1])];
   for i in [ 1 .. Size(cosets)  ] do 

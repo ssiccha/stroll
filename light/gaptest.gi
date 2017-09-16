@@ -539,29 +539,28 @@ end;
 # If it finds a smaller path it returns a c with A_kpc < A_kp
 # It also calculates the stabilizer of A_kp in B.
 CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
-  local counter, block, i, blockStack, b, isSplitStep, canonizer;
-  counter := 0;
+  local one, block, i, blockStack, b, isSplitStep, canonizer;
+  one := One(p);
   ladder.C[k] := ladder.C[k-1];
   block := rec( g := p, b := One(p), i := 1);
   blockStack := StackCreate(100);
   StackPush( blockStack, block);
   while not StackIsEmpty(blockStack) do
-    counter := counter + 1;
     block := StackPop(blockStack);
     i := block.i;
     b := block.b;
     if i+1 = k then
       ladder.C[i+1] := ClosureGroup(ladder.C[i+1],b);
-      continue;
-    fi;
-    isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
-    if isSplitStep then
-      canonizer := SplitOrbit(block,blockStack,p,k,ladder);
-      if not canonizer = One(p) then
-        return canonizer; 
-      fi;
     else
-      FuseOrbit(block,blockStack,p,ladder);
+      isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
+      if isSplitStep then
+        canonizer := SplitOrbit(block,blockStack,p,k,ladder);
+        if not canonizer = one then
+          return canonizer; 
+        fi;
+      else
+        FuseOrbit(block,blockStack,p,ladder);
+      fi;
     fi;
   od;
   return One(p);
