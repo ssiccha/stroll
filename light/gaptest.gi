@@ -519,14 +519,14 @@ FuseOrbit := function( block, blockStack, p, ladder )
     StackPush(blockStack,block);
     return;
   fi;
-  ## TODO is this performance relevant?
-  # z := SmallestStrongPathToCoset(g,i+1,ladder);
-  z := CanonicalRightCosetElement(ladder.chain[i+1],g);
-  c := SmallestOrbitRepresentativeInStabilizerOf_p( g*(z^-1)*p, i+1, p, ladder );
   # prevent double processing:
   # the block is processed if and only if 
   # A_ig*z^-1*p is smallest in its orbit under the action of ladder.C[i+1]?
-  if One(p) = c then
+  ## TODO is this performance relevant?
+  # z := SmallestStrongPathToCoset(g,i+1,ladder);
+  # c := SmallestOrbitRepresentativeInStabilizerOf_p( g*(z^-1)*p, i+1, p, ladder );
+  c := CanonicalRightCosetElement(ladder.C[i+1]^(b^-1),b);
+  if g*c*p^-1 in ladder.chain[i] then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
   fi;
