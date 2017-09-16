@@ -38,35 +38,25 @@ end;
 # smallest strong path of length k, whose last component is the coset A_kg.
 #
 SmallestStrongPathToCoset := function(g,k,ladder)
-  local z, U, zi, i, b, stab, tmp, h;
-  h := g;
+  local z, position, preimage, tmp, hsmall, canonical, i, h;
   z := One(ladder.G);
-  stab := ConjugateGroup(ladder.chain[k],h);
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      # After step i the first i components of the 
-      # smallest path to the coset A_kg are (A_1h*z,...,A_ih*z) 
-      # and A_kh*z = A_kg
-      # stab^z is the combined stabilizer of
-      # the path (A_1h*z,...,A_ih*z) and A_kh*z
-      # h is in A_i, thus we can use the order on A_{i+1}\A_i to determine 
-      # the (i+1)-th component of the smallest path to A_kg
-      tmp := FindOrbitRep(h,i,stab,ladder);
-      stab := tmp.stabilizer;
-      b := tmp.canonizer; 
-      zi := tmp.orbitCanonicalElement;   
-      h := h*b;
-      stab := ConjugateGroup(stab,b);
-      h := h*zi^-1;
-      stab := ConjugateGroup(stab,zi^-1);
-      z := zi*z;
-      if  not h*z*g^-1 in ladder.chain[k] then
-        ## DEBUG !!!
-        Error("A_kh*z <> A_kg \nargument g = ",g,"\nargument k = ",k,"\n"); 
-      fi;
+      position := Size(ladder.transversal[i]) + 1;
+      preimage := ladder.splitTransversal[k][i]; 
+      for h in preimage do
+        tmp := PositionCanonical(ladder.transversal[i],h*g);
+        if position > tmp then
+          position := tmp; 
+          hsmall := h;
+        fi;
+      od;
+      canonical := ladder.transversal[i][position];
+      g := hsmall*g*canonical^-1;
+      z := canonical*z;
     fi; 
   od;
-  return h*z;
+  return z;
 end; 
 
 
