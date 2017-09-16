@@ -11,7 +11,7 @@ makeStandardPermutationLadder := function(n)
     groups[2*i] := Group(gens);
   od;
 # groups[2*n-1] := SymmetricGroup(n);
-  return constructStrongLadder(groups);
+  return StroLLBuildLadder(groups);
 end;
 
 
@@ -85,6 +85,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # In a breadth first search algorithm the stabilizer ladder.C[i-1] 
       # could have been overwritten.
       # This is a depth first search algorithm so the stabilizers stay unchanged.
+      ladder.C[i-1] := coset.stabilizer;
       canonizer := CheckSmallestInDoubleCosetFuse(i,g,ladder);
       if not One(g) = canonizer then
         # coset can be constructed from a smaller coset

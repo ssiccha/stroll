@@ -102,7 +102,7 @@ SplitOrbit := function( block, blockStack, p, k, ladder )
   b := block.b;
   i := block.i;
   # preimage is a transversal of E[k][i+1]\E[k][i];
-  preimage := ladder.E_ij_transversal[k][i+1]; 
+  preimage := ladder.splitTransversal[k][i+1]; 
   for h in preimage do
     c := SmallestOrbitRepresentativeInStabilizerOf_p( h*g*b, i+1, p, ladder );
     if false = LowerOrEqualInStabilizerOf_p( p, h*g*b*c, i+1, p, ladder) then

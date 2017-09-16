@@ -42,7 +42,7 @@
 #     record.intersection is a list of size n:
 #     For all i<n intersection[i] is equal to the intersection of the
 #     groups U_1 to U_i.
-buildStroLLTransversals := function(groups)
+StroLLBuildTransversal := function(groups)
   local one, ladder, U, index, i;
   one := One(groups[1]);
   ladder := rec();
@@ -52,14 +52,12 @@ buildStroLLTransversals := function(groups)
   ladder.transversal := [RightTransversal(ladder.G,ladder.G)];
   ladder.rightcosets := [RightCosets(ladder.G,ladder.G)];
   ladder.hom := [];
-  ladder.intersection := [groups[1]];
   for i in [2 .. Size(groups)] do
     U := groups[i];
     if true = IsSubgroup(U,groups[i-1]) then
       # the previous group is a subgroup of group[i]
       index := IndexNC(U,groups[i-1]);
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/index;
-      ladder.intersection[i] := ladder.intersection[i-1];
       ladder.transversal[i] := RightTransversal(U,ladder.chain[i-1]);
       ladder.rightcosets[i] := RightCosets(U,ladder.chain[i-1]);
       ladder.hom[i] := FactorCosetAction(U,ladder.chain[i-1]);
@@ -68,8 +66,6 @@ buildStroLLTransversals := function(groups)
       # group[i] is a subgroup of the previous group
       index := IndexNC(groups[i-1],U);
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*index;
-      ladder.intersection[i] := Intersection(U,ladder.intersection[i-1]);
-      # ladder.transversal[i] := RightTransversal(ladder.intersection[i-1],ladder.intersection[i]);
       ladder.transversal[i] := RightTransversal(ladder.chain[i-1],U);
       ladder.rightcosets[i] := RightCosets(ladder.chain[i-1],U);
       ladder.hom[i] := FactorCosetAction(ladder.chain[i-1],U);
@@ -90,33 +86,34 @@ end;
 
 
 
-BuildStroLLSubladder := function(ladder)
-  local i, j, c;
-  ladder.E := [];
-  ladder.E_ij_transversal := [];
-  for i in [ 2 .. Size(ladder.chain)-1 ] do
-    ladder.E[i] := [ladder.chain[i]];
-    ladder.E_ij_transversal[i] := [];
+StroLLBuildSubladder := function(ladder)
+  local cut, split, i, j;
+  ladder.cut1tojplusi := [];
+  ladder.splitTransversal := [];
+  for i in [ 2 .. Size(ladder.chain) ] do
+    # cut1tojplusi[i][j] = A_1 \cap .. \cap A_j \cap A_i;
+    cut := [ladder.chain[i]];
+    split := []; 
     for j in [ 2 .. i ] do
       if ladder.subgroupIndex[j-1] < ladder.subgroupIndex[j] then
-        ladder.E[i][j] := Intersection(ladder.chain[i],ladder.chain[j]); 
-        # E_ij_transversal = E_[i][j]/E[i][j-1];
-        ladder.E_ij_transversal[i][j] := RightTransversal(ladder.E[i][j-1],ladder.E[i][j]);
+        cut[j] := Intersection(ladder.chain[j],cut[j-1]);
+        split[j] := RightTransversal(cut[j-1],cut[j]);
       else
-        ladder.E[i][j] := Intersection(ladder.chain[i],ladder.chain[j]); 
-        # E_ij_transversal = E_[i][j-1]/E[i][j];
-        ladder.E_ij_transversal[i][j] := RightTransversal(ladder.E[i][j],ladder.E[i][j-1]);
+        cut[j] := cut[j-1];
+        split[j] := RightTransversal(cut[j],cut[j-1]);
       fi;
     od;
+    ladder.cut1tojplusi[i] := cut; 
+    ladder.splitTransversal[i] := split;
   od;
 end;
 
 
-constructStrongLadder := function(groups)
+StroLLBuildLadder := function(groups)
   local ladder;
-  ladder := buildStroLLTransversals(groups);
+  ladder := StroLLBuildTransversal(groups);
   # BuildStroLLTransversalCompare(ladder);
-  BuildStroLLSubladder(ladder);
+  StroLLBuildSubladder(ladder);
   return ladder;
 end;
 
