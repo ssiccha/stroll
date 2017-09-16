@@ -34,7 +34,7 @@ test := function(i,k)
   Print("found random element ",g,"\n");
   s := SmallestStrongPathToCoset(g,i,ladder);
   for u in U do
-    if false = ladder.BoolLowerOrEqualPath(s,u*g,i) then
+    if false = ladder.BoolLowerOrEqualPath(s,u*g,i,ladder) then
       Print("Fehler gefunden \n"); 
     fi;  
   od;
@@ -85,8 +85,6 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # In a breadth first search algorithm the stabilizer ladder.C[i-1] 
       # could have been overwritten.
       # This is a depth first search algorithm so the stabilizers stay unchanged.
-      # For performance reasons delete the next line and check results
-      ladder.C[i-1] := coset.stabilizer;
       canonizer := CheckSmallestInDoubleCosetFuse(i,g,ladder);
       if not One(g) = canonizer then
         # coset can be constructed from a smaller coset
@@ -95,10 +93,10 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       coset := rec(g := g, stabilizer := ladder.C[i], i := i);
       Add(L[i],coset);
       #### DEBUG begin ####
-      cut := Intersection(B^(g^-1),ladder.chain[i]);
-      if not Size(coset.stabilizer) = Size(cut) then
-        Error("\nstabilizer sizes are not equal\n g = ",g," Size(stabilizer) = ",Size(coset.stabilizer)," Size(cut) = ",Size(cut)," stabilizer = ",coset.stabilizer,"\n\n");
-      fi;
+      # cut := Intersection(B^(g^-1),ladder.chain[i]);
+      # if not Size(coset.stabilizer) = Size(cut) then
+      #   Error("\nstabilizer sizes are not equal\n g = ",g," Size(stabilizer) = ",Size(coset.stabilizer)," Size(cut) = ",Size(cut)," stabilizer = ",coset.stabilizer,"\n\n");
+      # fi;
       #### DEBUG end ####
       if not i = k then
         StackPush(cosetStack,coset);
@@ -169,7 +167,7 @@ BruteForceCanonizeCoset := function( g, k, ladder, B )
   for o in orbit do
     o := Representative(o);
     o := SmallestStrongPathToCoset(o,k,ladder);
-    if not ladder.LowerOrEqualPath(smallest, o, k) then
+    if not LowerOrEqualPath(smallest, o, k, ladder) then
       smallest := o;
     fi;
   od;
