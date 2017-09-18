@@ -5,9 +5,9 @@ PathRepresentative := function(g,k,ladder)
   z := One(g); 
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      perm := Image(ladder.hom[i],g);
-      position := 1^perm;
-#     position2 := PositionCanonical(ladder.transversal[i],g);
+#     perm := Image(ladder.hom[i],g);
+#     position := 1^perm;
+      position := PositionCanonical(ladder.transversal[i],g);
 #     if not position = position2 then
 #       Error("the positioning via homomorphism is not correct"); 
 #     fi;

@@ -190,4 +190,42 @@ end;
 
 
 
+LeiterspielLightGraphGenerationProfiling := function(n,k)
+  local fkts;
+  ClearProfile();
+  fkts := [CanonicalRightCosetElement
+          ,CheckSmallestInDoubleCosetSplit
+          ,CheckSmallestInDoubleCosetFuse
+          ,FindOrbitRep
+          ,FindSmallerOrbitRepresentative
+          ,FuseOrbit
+          ,makeGraphGroup
+          ,makeStandardPermutationLadder
+          ,LeiterspielLightDoubleCosets
+          ,LowerOrEqualInStabilizerOf_p
+          ,PathRepresentative
+          ,SmallestOrbitRepresentativeInStabilizerOf_p
+          ,SmallestStrongPathToCoset
+          ,SplitOrbit
+          ];
+  ProfileFunctions(fkts);
+  LeiterspielLightGraphGeneration(n,k);
+  DisplayProfile();
+end;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

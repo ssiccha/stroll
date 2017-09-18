@@ -2,13 +2,15 @@
 
 
 LowerOrEqualPath := function( a, b, k, ladder)
-  local perm_a, position_a, perm_b, position_b, canonical, i;
+  local position_a, position_b, canonical, i;
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      perm_a := Image(ladder.hom[i],a);
-      position_a := 1^perm_a;
-      perm_b := Image(ladder.hom[i],b);
-      position_b := 1^perm_b;
+      # perm_a := Image(ladder.hom[i],a);
+      # position_a := 1^perm_a;
+      # perm_b := Image(ladder.hom[i],b);
+      # position_b := 1^perm_b;
+      position_a := PositionCanonical(ladder.transversal[i],a);
+      position_b := PositionCanonical(ladder.transversal[i],b);
       if  position_a < position_b then
         return true;
       elif  position_a > position_b  then 
@@ -45,6 +47,8 @@ SmallestStrongPathToCoset := function(g,k,ladder)
       position := Size(ladder.transversal[i]) + 1;
       preimage := ladder.splitTransversal[k][i]; 
       for h in preimage do
+        # perm := Image(ladder.hom[i],h*g);
+        # tmp := 1^perm;
         tmp := PositionCanonical(ladder.transversal[i],h*g);
         if position > tmp then
           position := tmp; 
@@ -66,13 +70,41 @@ end;
 
 # A_i <= A_{i-1} and a and b are in the preimage of A_{i-1}p;
 LowerOrEqualInStabilizerOf_p := function( a, b, i, p, ladder )
-  local z, position_a, position_b;
-  z := PathRepresentative(p,i-1,ladder);
-  if not a*z^-1 in ladder.chain[i-1] then
-    Error("the Element a must be in the ladder group A_{i-1}p");
-  fi;
-  if not b*z^-1 in ladder.chain[i-1] then
-    Error("the Element b must be in the ladder group A_{i-1}p");
+  local U, z, position_a, position_b;
+  if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
+    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
+      ladder.p[i] := p;
+      ladder.z[i] := PathRepresentative( p, i-1, ladder ); 
+      ladder.orbits[i] := [];
+      ladder.min[i] := [];
+      U := ConjugateGroup( ladder.C[i-1], ladder.z[i]^-1 );
+      ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+      ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
+    fi;
+    z := ladder.z[i];
+    # if not a*z^-1 in ladder.chain[i-1] then
+    #   Error("the Element a must be in the ladder group A_{i-1}p");
+    # fi;
+    # if not b*z^-1 in ladder.chain[i-1] then
+    #   Error("the Element b must be in the ladder group A_{i-1}p");
+    # fi;
+  else
+    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i] then
+      ladder.p[i] := p;
+      ladder.z[i] := PathRepresentative( p, i, ladder ); 
+      ladder.orbits[i] := [];
+      ladder.min[i] := [];
+      U := ConjugateGroup( ladder.C[i], ladder.z[i]^-1 );
+      ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+      ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
+    fi;
+    z := ladder.z[i];
+    # if not a*z^-1 in ladder.chain[i-1] then
+    #   Error("the Element a must be in the ladder group A_{i-1}p");
+    # fi;
+    # if not b*z^-1 in ladder.chain[i-1] then
+    #   Error("the Element b must be in the ladder group A_{i-1}p");
+    # fi;
   fi;
   position_a := PositionCanonical(ladder.transversal[i],a*z^-1);        
   position_b := PositionCanonical(ladder.transversal[i],b*z^-1);        
@@ -119,11 +151,9 @@ FuseOrbit := function( block, blockStack, p, ladder )
     return;
   fi;
   # prevent double processing:
-  # the block is processed if and only if 
-  # A_ig*z^-1*p is smallest in its orbit under the action of ladder.C[i+1]?
-  ## TODO is this performance relevant?
-  # z := SmallestStrongPathToCoset(g,i+1,ladder);
-  # c := SmallestOrbitRepresentativeInStabilizerOf_p( g*(z^-1)*p, i+1, p, ladder );
+  # the block is processed if and only if A_ig*z^-1*p is
+  # the representative of its orbit under the action of
+  # the group ladder.C[i+1]
   c := CanonicalRightCosetElement(ladder.C[i+1]^(b^-1),b);
   if g*c*p^-1 in ladder.chain[i] then
     block := rec( g := g, b := b, i := i+1 );
