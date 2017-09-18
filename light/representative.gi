@@ -152,13 +152,9 @@ FindOrbitRep := function( g, k, V, ladder)
 end;
 
 
-# A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
-SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
-  local z, pos, isInOrbit, min, U, gensPreimage, gensImage, isPointStabilizer, canonizer, options, orbit, pnt, word, j;
-  if i = 1 then
-    return One(p); 
-  fi;
 
+ReinitializeOrbitAndStabilizerStorage := function(p,n,ladder)
+  local U, permlist, i;
   # initialize data storage
   if not IsBound(ladder.p) then
     ladder.p := [];
@@ -168,29 +164,44 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
     ladder.gensOfStab := [];
     ladder.homImageGensOfStab := [];
   fi;
-  
-  # if p has changed, delete old data storage
-  if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
-      ladder.p[i] := p;
-      ladder.z[i] := PathRepresentative( p, i-1, ladder ); 
-      ladder.orbits[i] := [];
-      ladder.min[i] := [];
-      U := ConjugateGroup( ladder.C[i-1], ladder.z[i]^-1 );
-      ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-      ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
+    
+  for i in [ 2 .. n ] do
+    # if p has changed, delete old data storage
+    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
+      if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
+        ladder.p[i] := p;
+        ladder.z[i] := PathRepresentative( p, i-1, ladder ); 
+        ladder.orbits[i] := [];
+        ladder.min[i] := [];
+        U := ConjugateGroup( ladder.C[i-1], ladder.z[i]^-1 );
+        ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        permlist := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        ladder.homImageGensOfStab[i] := permlist; 
+      fi;
+    else
+      if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i] then
+        ladder.p[i] := p;
+        ladder.z[i] := PathRepresentative( p, i, ladder ); 
+        ladder.orbits[i] := [];
+        ladder.min[i] := [];
+        U := ConjugateGroup( ladder.C[i], ladder.z[i]^-1 );
+        ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        permlist := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        ladder.homImageGensOfStab[i] := permlist; 
+      fi;
     fi;
-  else
-    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i] then
-      ladder.p[i] := p;
-      ladder.z[i] := PathRepresentative( p, i, ladder ); 
-      ladder.orbits[i] := [];
-      ladder.min[i] := [];
-      U := ConjugateGroup( ladder.C[i], ladder.z[i]^-1 );
-      ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-      ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
-    fi;
+  od;
+end;
+
+
+
+# A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
+SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
+  local z, pos, isInOrbit, min, U, gensPreimage, gensImage, isPointStabilizer, canonizer, options, orbit, pnt, word, j;
+  if i = 1 then
+    return One(p); 
   fi;
+
 
   # initialize g and pos 
   z := ladder.z[i];

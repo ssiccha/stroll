@@ -71,41 +71,7 @@ end;
 # A_i <= A_{i-1} and a and b are in the preimage of A_{i-1}p;
 LowerOrEqualInStabilizerOf_p := function( a, b, i, p, ladder )
   local U, z, position_a, position_b;
-  if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
-      ladder.p[i] := p;
-      ladder.z[i] := PathRepresentative( p, i-1, ladder ); 
-      ladder.orbits[i] := [];
-      ladder.min[i] := [];
-      U := ConjugateGroup( ladder.C[i-1], ladder.z[i]^-1 );
-      ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-      ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
-    fi;
-    z := ladder.z[i];
-    # if not a*z^-1 in ladder.chain[i-1] then
-    #   Error("the Element a must be in the ladder group A_{i-1}p");
-    # fi;
-    # if not b*z^-1 in ladder.chain[i-1] then
-    #   Error("the Element b must be in the ladder group A_{i-1}p");
-    # fi;
-  else
-    if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i] then
-      ladder.p[i] := p;
-      ladder.z[i] := PathRepresentative( p, i, ladder ); 
-      ladder.orbits[i] := [];
-      ladder.min[i] := [];
-      U := ConjugateGroup( ladder.C[i], ladder.z[i]^-1 );
-      ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-      ladder.homImageGensOfStab[i] := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x)); 
-    fi;
-    z := ladder.z[i];
-    # if not a*z^-1 in ladder.chain[i-1] then
-    #   Error("the Element a must be in the ladder group A_{i-1}p");
-    # fi;
-    # if not b*z^-1 in ladder.chain[i-1] then
-    #   Error("the Element b must be in the ladder group A_{i-1}p");
-    # fi;
-  fi;
+  z := ladder.z[i];
   position_a := PositionCanonical(ladder.transversal[i],a*z^-1);        
   position_b := PositionCanonical(ladder.transversal[i],b*z^-1);        
   if position_a <= position_b then
@@ -172,6 +138,7 @@ end;
 # It also calculates the stabilizer of A_kp in B.
 CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
   local one, block, i, blockStack, b, isSplitStep, canonizer;
+  ReinitializeOrbitAndStabilizerStorage(p,k-1,ladder);
   one := One(p);
   ladder.C[k] := ladder.C[k-1];
   block := rec( g := p, b := One(p), i := 1);
@@ -202,6 +169,7 @@ end;
 
 CheckSmallestInDoubleCosetSplit := function( i, p, ladder) 
   local z, U, tmp, c;
+  # ReinitializeOrbitAndStabilizerStorage(p,i,ladder);
   # A_ipz^-1c is smallest in its C_{i-1} orbit
   z := PathRepresentative(p,i-1,ladder);
   U := ConjugateGroup(ladder.C[i-1],z^-1);
