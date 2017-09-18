@@ -42,43 +42,38 @@
 #     record.intersection is a list of size n:
 #     For all i<n intersection[i] is equal to the intersection of the
 #     groups U_1 to U_i.
-StroLLBuildTransversal := function(groups)
-  local one, ladder, U, index, i;
-  one := One(groups[1]);
+StroLLBuildTransversal := function(subgroup)
+  local one, ladder, U, V, i;
+  one := One(subgroup[1]);
   ladder := rec();
-  ladder.G := groups[1];
-  ladder.chain := [groups[1]]; 
+  ladder.G := subgroup[1];
+  ladder.chain := [subgroup[1]]; 
   ladder.subgroupIndex := [1];
   ladder.transversal := [RightTransversal(ladder.G,ladder.G)];
   ladder.rightcosets := [RightCosets(ladder.G,ladder.G)];
   ladder.hom := [];
-  for i in [2 .. Size(groups)] do
-    U := groups[i];
-    if true = IsSubgroup(U,groups[i-1]) then
-      # the previous group is a subgroup of group[i]
-      index := IndexNC(U,groups[i-1]);
-      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/index;
-      ladder.transversal[i] := RightTransversal(U,ladder.chain[i-1]);
-      ladder.rightcosets[i] := RightCosets(U,ladder.chain[i-1]);
-      ladder.hom[i] := FactorCosetAction(U,ladder.chain[i-1]);
-#     ladder.hom[i] := ActionHomomorphism(U,ladder.transversal[i],OnRight);
-    elif true = IsSubgroup(groups[i-1],U) then
-      # group[i] is a subgroup of the previous group
-      index := IndexNC(groups[i-1],U);
-      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*index;
-      ladder.transversal[i] := RightTransversal(ladder.chain[i-1],U);
-      ladder.rightcosets[i] := RightCosets(ladder.chain[i-1],U);
-      ladder.hom[i] := FactorCosetAction(ladder.chain[i-1],U);
+  for i in [2 .. Size(subgroup)] do
+    ladder.chain[i] := subgroup[i];
+    if true = IsSubgroup(subgroup[i],subgroup[i-1]) then
+      # group[i-1] is a subgroup of group[i]
+      U := subgroup[i];
+      V := subgroup[i-1];
+      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/IndexNC(U,V);
+    elif true = IsSubgroup(subgroup[i-1],subgroup[i]) then
+      # group[i] is a subgroup of group[i-1];
+      U := subgroup[i-1];
+      V := subgroup[i];
+      ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*IndexNC(U,V);
     else
       Error("Entry ",i," in the grouplist is neither a subgroup of the group on position ",i-1,", nor the other way round\n"); 
       return;
     fi;
-    ladder.chain[i] := U;
-    ## DEBUG
+    ladder.rightcosets[i] := RightCosets(U,V);
+    ladder.hom[i] := FactorCosetAction(U,V);
+    ladder.transversal[i] := RightTransversal(U,V);
     if not 1 = PositionCanonical(ladder.transversal[i],one) then
       Error("Assumption on the transversal is not fulfilled");
     fi;
-    ## DEBUG end
   od;
   return ladder;
 end;
@@ -88,7 +83,8 @@ end;
 
 StroLLBuildSubladder := function(ladder)
   local cut, split, i, j;
-  ladder.cut1tojplusi := [];
+  ladder.cut1toI := [ladder.chain[1]];
+  ladder.cut1toJplusI := [[ladder.chain[1]]];
   ladder.splitTransversal := [];
   for i in [ 2 .. Size(ladder.chain) ] do
     # cut1tojplusi[i][j] = A_1 \cap .. \cap A_j \cap A_i;
@@ -100,10 +96,10 @@ StroLLBuildSubladder := function(ladder)
         split[j] := RightTransversal(cut[j-1],cut[j]);
       else
         cut[j] := cut[j-1];
-        split[j] := RightTransversal(cut[j],cut[j-1]);
       fi;
     od;
-    ladder.cut1tojplusi[i] := cut; 
+    ladder.cut1toI[i] := cut[i];
+    ladder.cut1toJplusI[i] := cut; 
     ladder.splitTransversal[i] := split;
   od;
 end;

@@ -265,12 +265,6 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
     word := List(word, x -> gensPreimage[x]);
     canonizer := canonizer*Product(word)^z;
   fi;
-  ### DEBUG start ###
-# pos := PositionCanonical(ladder.transversal[i],g*canonizer);
-# if not pos = min then
-#   Error("path in function SmallestOrbitRepresentativeInStabilizerOf_p is not correct");
-# fi; 
-  ### DEBUG end ###
   return canonizer;
 end;
 

@@ -45,7 +45,7 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local cosetStack, coset, stabilizer, i, L, g, stab, canonizer, z, cut, h;
+  local cosetStack, coset, stabilizer, i, L, g, stab, U, V, preimage, canonizer, z, h;
   ladder.C := [B];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
@@ -60,7 +60,10 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
     i := coset.i+1;
     stab := coset.stabilizer;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      for h in ladder.transversal[i] do
+      U := ladder.cut1toI[i];
+      V := ladder.cut1toI[i-1];
+      preimage := RightTransversal(V,U);
+      for h in preimage do
         # stab is more efficient then B
         # ladder.C[i-1] := stab;
         # z := SmallestStrongPathToCoset(h*g,i,ladder);
@@ -77,14 +80,14 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # If p is the smallest path to A_ip, then 
       # A_ig should be constructed from the coset A_{i-1}p.
       # So the check for canonity can be done with this z: 
-      z := SmallestStrongPathToCoset(g,i-1,ladder);
-      g := SmallestStrongPathToCoset(g,i,ladder);
+      z := SmallestStrongPathToCoset(g,i,ladder);
       if not g*z^-1 in ladder.chain[i-1] then
         continue;
       fi;
       # In a breadth first search algorithm the stabilizer ladder.C[i-1] 
       # could have been overwritten.
-      # This is a depth first search algorithm so the stabilizers stay unchanged.
+      # This is a depth first search algorithm so all stabilizers 
+      # besides the last one stay unchanged.
       ladder.C[i-1] := coset.stabilizer;
       canonizer := CheckSmallestInDoubleCosetFuse(i,g,ladder);
       if not One(g) = canonizer then

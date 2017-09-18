@@ -138,15 +138,18 @@ SplitOrbit := function( block, blockStack, p, k, ladder )
   return One(p); 
 end;
 
+
+
+
 # Several A_ig yield the same A_{i+1}g.
 # FuseOrbit only puts exactly one of them onto the stack
 FuseOrbit := function( block, blockStack, p, ladder )
-  local g, i, b, z, c;
+  local g, i, b, c;
   g := block.g;
   i := block.i;
   b := block.b;
   if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
-    block := rec( g := g, b := b, i := i+1 );
+    block.i := i+1; 
     StackPush(blockStack,block);
     return;
   fi;
@@ -156,7 +159,7 @@ FuseOrbit := function( block, blockStack, p, ladder )
   # the group ladder.C[i+1]
   c := CanonicalRightCosetElement(ladder.C[i+1]^(b^-1),b);
   if g*c*p^-1 in ladder.chain[i] then
-    block := rec( g := g, b := b, i := i+1 );
+    block.i := i+1; 
     StackPush(blockStack,block);
   fi;
 end;
