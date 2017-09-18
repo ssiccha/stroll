@@ -39,7 +39,7 @@ end;
 # Given the index k, a ladder [A_1,..,A_k] and an element g \in A_1 this function calculates the 
 # smallest strong path of length k, whose last component is the coset A_kg.
 #
-SmallestStrongPathToCoset := function(g,k,ladder)
+SmallestStrongPathToCoset := function( g, k, ladder )
   local z, position, preimage, tmp, hsmall, canonical, i, h;
   z := One(ladder.G);
   for i in [ 2 .. k ] do
@@ -68,40 +68,27 @@ end;
 
 
 
-# A_i <= A_{i-1} and a and b are in the preimage of A_{i-1}p;
-LowerOrEqualInStabilizerOf_p := function( a, b, i, p, ladder )
-  local U, z, position_a, position_b;
-  z := ladder.z[i];
-  position_a := PositionCanonical(ladder.transversal[i],a*z^-1);        
-  position_b := PositionCanonical(ladder.transversal[i],b*z^-1);        
-  if position_a <= position_b then
-    return true; 
-  fi;
-  return false;
-end;
-
-
-
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
-SplitOrbit := function( block, blockStack, p, k, ladder )
+SplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   local g, b, i, preimage, c, tmp, newBlock, h;
+  # p := orbAndStab.p;
   g := block.g;
   b := block.b;
   i := block.i;
   # preimage is a transversal of E[k][i+1]\E[k][i];
   preimage := ladder.splitTransversal[k][i+1]; 
   for h in preimage do
-    c := SmallestOrbitRepresentativeInStabilizerOf_p( h*g*b, i+1, p, ladder );
-    if false = LowerOrEqualInStabilizerOf_p( p, h*g*b*c, i+1, p, ladder) then
+    c := SmallestOrbitRepresentativeInStabilizerOf_p( h*g*b, i+1, p, orbAndStab, ladder );
+    if false = LowerOrEqualInStabilizerOf_p( p, h*g*b*c, i+1, orbAndStab, ladder) then
       return b*c;
-    elif false = LowerOrEqualInStabilizerOf_p( h*g*b*c, p, i+1, p, ladder) then
+    elif false = LowerOrEqualInStabilizerOf_p( h*g*b*c, p, i+1, orbAndStab, ladder) then
       continue;
     fi;
     newBlock := rec( g := h*g, b := b*c, i := i+1 );
     StackPush(blockStack,newBlock);
   od;
-  return One(p); 
+  return One(g); 
 end;
 
 
@@ -109,12 +96,13 @@ end;
 
 # Several A_ig yield the same A_{i+1}g.
 # FuseOrbit only puts exactly one of them onto the stack
-FuseOrbit := function( block, blockStack, p, ladder )
+FuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
   local g, i, b, c;
+  # p := orbAndStab.p;
   g := block.g;
   i := block.i;
   b := block.b;
-  if Size(ladder.C[i]) = Size(ladder.C[i+1]) then
+  if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
     block.i := i+1; 
     StackPush(blockStack,block);
     return;
@@ -122,8 +110,8 @@ FuseOrbit := function( block, blockStack, p, ladder )
   # prevent double processing:
   # the block is processed if and only if A_ig*z^-1*p is
   # the representative of its orbit under the action of
-  # the group ladder.C[i+1]
-  c := CanonicalRightCosetElement(ladder.C[i+1]^(b^-1),b);
+  # the group orbAndStab.C[i+1]
+  c := CanonicalRightCosetElement(orbAndStab.C[i+1]^(b^-1),b);
   if g*c*p^-1 in ladder.chain[i] then
     block.i := i+1; 
     StackPush(blockStack,block);
@@ -136,11 +124,11 @@ end;
 # for a smaller path.
 # If it finds a smaller path it returns a c with A_kpc < A_kp
 # It also calculates the stabilizer of A_kp in B.
-CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
+CheckSmallestInDoubleCosetFuse := function( k, p, orbAndStab, ladder)
   local one, block, i, blockStack, b, isSplitStep, canonizer;
-  ReinitializeOrbitAndStabilizerStorage(p,k-1,ladder);
+  ReinitializeOrbitAndStabilizerStorage(p,k-1,orbAndStab, ladder);
   one := One(p);
-  ladder.C[k] := ladder.C[k-1];
+  orbAndStab.C[k] := orbAndStab.C[k-1];
   block := rec( g := p, b := One(p), i := 1);
   blockStack := StackCreate(100);
   StackPush( blockStack, block);
@@ -149,16 +137,16 @@ CheckSmallestInDoubleCosetFuse := function( k, p, ladder)
     i := block.i;
     b := block.b;
     if i+1 = k then
-      ladder.C[i+1] := ClosureGroup(ladder.C[i+1],b);
+      orbAndStab.C[i+1] := ClosureGroup(orbAndStab.C[i+1],b);
     else
       isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
       if isSplitStep then
-        canonizer := SplitOrbit(block,blockStack,p,k,ladder);
+        canonizer := SplitOrbit(block,blockStack,p,k,orbAndStab,ladder);
         if not canonizer = one then
           return canonizer; 
         fi;
       else
-        FuseOrbit(block,blockStack,p,ladder);
+        FuseOrbit(block,blockStack,p,orbAndStab,ladder);
       fi;
     fi;
   od;
@@ -167,36 +155,37 @@ end;
 
 
 
-CheckSmallestInDoubleCosetSplit := function( i, p, ladder) 
+CheckSmallestInDoubleCosetSplit := function( i, p, orbAndStab, ladder) 
   local z, U, tmp, c;
-  # ReinitializeOrbitAndStabilizerStorage(p,i,ladder);
+  # ReinitializeOrbitAndStabilizerStorage(p,i-1,orbAndStab,ladder);
   # A_ipz^-1c is smallest in its C_{i-1} orbit
   z := PathRepresentative(p,i-1,ladder);
-  U := ConjugateGroup(ladder.C[i-1],z^-1);
+  U := ConjugateGroup(orbAndStab.C[i-1],z^-1);
   tmp := FindOrbitRep( p*z^-1, i, U, ladder );
   c := tmp.canonizer;
   # A_ipz^-1 = A_ipz^-1c
   if not (p*z^-1*c)*(p*z^-1)^-1 in ladder.chain[i] then
     return c^z;
   fi;
-  ladder.C[i] := ConjugateGroup(tmp.stabilizer,z);
+  orbAndStab.C[i] := ConjugateGroup(tmp.stabilizer,z);
   return One(p);
 end;
 
 
 
 FindSmallerOrbitRepresentative := function(g, k, ladder, B)
-  local result, stabilizer, p, canonizer, i;
-  ladder.C := [B];
+  local result, orbAndStab, p, canonizer, i;
+  orbAndStab := rec();
+  orbAndStab.C := [B];
   result := rec(isCanonical := false, 
                 canonizer := One(g), 
                 stabilizer := Group(One(g)));
   p := SmallestStrongPathToCoset(g,k,ladder);
   for i in [ 2 .. k ] do
     if  ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i]  then
-      canonizer := CheckSmallestInDoubleCosetSplit(i,p,ladder); 
+      canonizer := CheckSmallestInDoubleCosetSplit(i,p,orbAndStab,ladder); 
     else
-      canonizer := CheckSmallestInDoubleCosetFuse(i,p,ladder);
+      canonizer := CheckSmallestInDoubleCosetFuse(i,p,orbAndStab,ladder);
     fi;
     if not canonizer = One(canonizer) then
       result.canonizer := canonizer;
@@ -204,7 +193,7 @@ FindSmallerOrbitRepresentative := function(g, k, ladder, B)
     fi;
   od;
   result.isCanonical := true;
-  result.stabilizer := ladder.C[k];
+  result.stabilizer := orbAndStab.C[k];
   return result;
 end;
 

@@ -45,8 +45,9 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local cosetStack, coset, stabilizer, i, L, g, stab, U, V, preimage, canonizer, z, h;
-  ladder.C := [B];
+  local orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
+  orbAndStab := rec();
+  orbAndStab.C := [B];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
   StackPush(cosetStack,coset);
@@ -65,11 +66,11 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       preimage := RightTransversal(V,U);
       for h in preimage do
         # stab is more efficient then B
-        # ladder.C[i-1] := stab;
+        # orbAndStab.C[i-1] := stab;
         # z := SmallestStrongPathToCoset(h*g,i,ladder);
-        canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,ladder);
+        canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,orbAndStab,ladder);
         if One(g) = canonizer then
-          coset := rec(g := h*g, stabilizer := ladder.C[i],i := i);
+          coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
           Add(L[i],coset);
           if not i = k then
             StackPush(cosetStack,coset);
@@ -84,17 +85,17 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       if not g*z^-1 in ladder.chain[i-1] then
         continue;
       fi;
-      # In a breadth first search algorithm the stabilizer ladder.C[i-1] 
+      # In a breadth first search algorithm the stabilizer orbAndStab.C[i-1] 
       # could have been overwritten.
       # This is a depth first search algorithm so all stabilizers 
       # besides the last one stay unchanged.
-      ladder.C[i-1] := coset.stabilizer;
-      canonizer := CheckSmallestInDoubleCosetFuse(i,g,ladder);
+      orbAndStab.C[i-1] := coset.stabilizer;
+      canonizer := CheckSmallestInDoubleCosetFuse(i,g,orbAndStab,ladder);
       if not One(g) = canonizer then
         # coset can be constructed from a smaller coset
         continue;
       fi;
-      coset := rec(g := g, stabilizer := ladder.C[i], i := i);
+      coset := rec(g := g, stabilizer := orbAndStab.C[i], i := i);
       Add(L[i],coset);
       #### DEBUG begin ####
       # cut := Intersection(B^(g^-1),ladder.chain[i]);

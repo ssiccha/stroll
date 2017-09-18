@@ -22,6 +22,20 @@ end;
 
 
 
+
+# A_i <= A_{i-1} and a and b are in the preimage of A_{i-1}p;
+LowerOrEqualInStabilizerOf_p := function( a, b, i, orbAndStab, ladder )
+  local U, z, position_a, position_b;
+  z := orbAndStab.z[i];
+  position_a := PositionCanonical(ladder.transversal[i],a*z^-1);        
+  position_b := PositionCanonical(ladder.transversal[i],b*z^-1);        
+  if position_a <= position_b then
+    return true; 
+  fi;
+  return false;
+end;
+
+
 FindOrbitRep := function( g, k, V, ladder)
   local result, transv, U, H, versionSwitchOrbitAlgorithm, omega, V_Image, gp, tmp, mp, gens, acts, homAct, ug, um;
   result := rec();
@@ -153,41 +167,41 @@ end;
 
 
 
-ReinitializeOrbitAndStabilizerStorage := function(p,n,ladder)
+ReinitializeOrbitAndStabilizerStorage := function(p,n,orbAndStab,ladder)
   local U, permlist, i;
   # initialize data storage
-  if not IsBound(ladder.p) then
-    ladder.p := [];
-    ladder.z := [];
-    ladder.orbits := [];
-    ladder.min := [];
-    ladder.gensOfStab := [];
-    ladder.homImageGensOfStab := [];
+  if not IsBound(orbAndStab.p) then
+    orbAndStab.p := [];
+    orbAndStab.z := [];
+    orbAndStab.orbits := [];
+    orbAndStab.min := [];
+    orbAndStab.gensOfStab := [];
+    orbAndStab.homImageGensOfStab := [];
   fi;
     
   for i in [ 2 .. n ] do
     # if p has changed, delete old data storage
     if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-      if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i-1] then
-        ladder.p[i] := p;
-        ladder.z[i] := PathRepresentative( p, i-1, ladder ); 
-        ladder.orbits[i] := [];
-        ladder.min[i] := [];
-        U := ConjugateGroup( ladder.C[i-1], ladder.z[i]^-1 );
-        ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-        permlist := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x));
-        ladder.homImageGensOfStab[i] := permlist; 
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
+        orbAndStab.p[i] := p;
+        orbAndStab.z[i] := PathRepresentative( p, i-1, ladder ); 
+        orbAndStab.orbits[i] := [];
+        orbAndStab.min[i] := [];
+        U := ConjugateGroup( orbAndStab.C[i-1], orbAndStab.z[i]^-1 );
+        orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        orbAndStab.homImageGensOfStab[i] := permlist; 
       fi;
     else
-      if false = IsBound(ladder.p[i]) or not ladder.p[i]*p^-1 in ladder.chain[i] then
-        ladder.p[i] := p;
-        ladder.z[i] := PathRepresentative( p, i, ladder ); 
-        ladder.orbits[i] := [];
-        ladder.min[i] := [];
-        U := ConjugateGroup( ladder.C[i], ladder.z[i]^-1 );
-        ladder.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-        permlist := List(ladder.gensOfStab[i], x -> Image(ladder.hom[i],x));
-        ladder.homImageGensOfStab[i] := permlist; 
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        orbAndStab.p[i] := p;
+        orbAndStab.z[i] := PathRepresentative( p, i, ladder ); 
+        orbAndStab.orbits[i] := [];
+        orbAndStab.min[i] := [];
+        U := ConjugateGroup( orbAndStab.C[i], orbAndStab.z[i]^-1 );
+        orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        orbAndStab.homImageGensOfStab[i] := permlist; 
       fi;
     fi;
   od;
@@ -196,25 +210,25 @@ end;
 
 
 # A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
-SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
+SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, orbAndStab, ladder )
   local z, pos, isInOrbit, min, U, gensPreimage, gensImage, isPointStabilizer, canonizer, options, orbit, pnt, word, j;
   if i = 1 then
-    return One(p); 
+    return One(g); 
   fi;
 
 
   # initialize g and pos 
-  z := ladder.z[i];
+  z := orbAndStab.z[i];
   g := g*z^-1;
   pos := PositionCanonical(ladder.transversal[i],g);
 
   # check, if pos is in one of the known orbits
   isInOrbit := false;
-  for j in [ 1 .. Size(ladder.orbits[i]) ] do
-    orbit := ladder.orbits[i][j];
+  for j in [ 1 .. Size(orbAndStab.orbits[i]) ] do
+    orbit := orbAndStab.orbits[i][j];
     if pos in orbit then
       isInOrbit := true;
-      min := ladder.min[i][j];
+      min := orbAndStab.min[i][j];
       break;
     fi;
   od;   
@@ -222,7 +236,7 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
   # element is not in one of the known orbits
   if not isInOrbit then
     # build up new orbit
-    gensImage := ladder.homImageGensOfStab[i]; 
+    gensImage := orbAndStab.homImageGensOfStab[i]; 
     isPointStabilizer := true;
     for j in gensImage do
       if not pos^j = pos then
@@ -233,9 +247,9 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
     if not isPointStabilizer then
       options := rec();
       if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-        options.grpsizebound := Size(ladder.C[i-1]);
+        options.grpsizebound := Size(orbAndStab.C[i-1]);
       else
-        options.grpsizebound := Size(ladder.C[i]);
+        options.grpsizebound := Size(orbAndStab.C[i]);
       fi;
       options.orbsizebound := Size(ladder.transversal[i]);
       options.schreier := true;
@@ -248,19 +262,19 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, ladder )
           min := j; 
         fi; 
       od;
-      Add(ladder.orbits[i],orbit);
-      Add(ladder.min[i],min);
+      Add(orbAndStab.orbits[i],orbit);
+      Add(orbAndStab.min[i],min);
     else
       min := pos;
       orbit := [pos];
-      Add(ladder.orbits[i],orbit);
-      Add(ladder.min[i],pos);
+      Add(orbAndStab.orbits[i],orbit);
+      Add(orbAndStab.min[i],pos);
     fi;
   fi;
 
   # find canonizing element
-  canonizer := One(p);
-  gensPreimage := ladder.gensOfStab[i]; 
+  canonizer := One(g);
+  gensPreimage := orbAndStab.gensOfStab[i]; 
   if not orbit[1] = pos then
     # find mapping of pos on orbit[1] 
     pnt := Position(orbit,pos);
