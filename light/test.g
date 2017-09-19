@@ -181,6 +181,8 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
   ProfileFunctions(fkts);
   LeiterspielLightGraphGeneration(n,k);
   DisplayProfile();
+  UnprofileFunctions(fkts);
+  ClearProfile();
 end;
 
 

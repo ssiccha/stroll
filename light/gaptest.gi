@@ -47,7 +47,7 @@ end;
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 SplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
-  local g, b, i, small, preimage, pos, orbitInfo, min, c, h;
+  local g, b, i, small, preimage, pos, o, min, c, h;
   # p := orbAndStab.p;
   g := block.g;
   b := block.b;
@@ -57,12 +57,12 @@ SplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   preimage := ladder.splitTransversal[k][i+1]; 
   for h in preimage do
     pos := BlockStabilizerPosition( h*g*b, i+1, orbAndStab, ladder );
-    orbitInfo := BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
-    min := orbitInfo.min;
+    o := BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
+    min := o.min;
     if small < min then
       continue;
     fi;
-    c := BlockStabilizerCanonizingElmnt( i+1, orbitInfo.orbit, pos, min, orbAndStab);
+    c := BlockStabilizerCanonizingElmnt( i+1, o.orbit, pos, min, orbAndStab);
     if small > min then
       return b*c;
     else
@@ -111,7 +111,7 @@ CheckSmallestInDoubleCosetFuse := function( k, p, orbAndStab, ladder)
   ReinitializeOrbitAndStabilizerStorage(p,k-1,orbAndStab, ladder);
   one := One(p);
   orbAndStab.C[k] := orbAndStab.C[k-1];
-  block := rec( g := p, b := One(p), i := 1);
+  block := rec( g := p, b := one, i := 1);
   blockStack := StackCreate(100);
   StackPush( blockStack, block);
   while not StackIsEmpty(blockStack) do
@@ -132,24 +132,39 @@ CheckSmallestInDoubleCosetFuse := function( k, p, orbAndStab, ladder)
       fi;
     fi;
   od;
-  return One(p);
+  return one;
 end;
 
 
 
 CheckSmallestInDoubleCosetSplit := function( i, p, orbAndStab, ladder) 
-  local z, U, tmp, c;
-  # ReinitializeOrbitAndStabilizerStorage(p,i-1,orbAndStab,ladder);
-  # A_ipz^-1c is smallest in its C_{i-1} orbit
-  z := PathRepresentative(p,i-1,ladder);
-  U := ConjugateGroup(orbAndStab.C[i-1],z^-1);
-  tmp := FindOrbitRep( p*z^-1, i, U, ladder );
-  c := tmp.canonizer;
-  # A_ipz^-1 = A_ipz^-1c
-  if not (p*z^-1*c)*(p*z^-1)^-1 in ladder.chain[i] then
-    return c^z;
+  local pos, o, min, c, homAct, z, tmp;
+  ReinitializeOrbitAndStabilizerStorage(p,i,orbAndStab,ladder);
+  pos := BlockStabilizerPosition( p, i, orbAndStab, ladder );
+  o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
+  min := o.min;
+  c := BlockStabilizerCanonizingElmnt( i, o.orbit, pos, min, orbAndStab);
+  if min < pos then
+    return c; 
   fi;
-  orbAndStab.C[i] := ConjugateGroup(tmp.stabilizer,z);
+    homAct := function(x,h)
+      x := PositionCanonical(ladder.transversal[i],x*h);
+      return ladder.transversal[i][x];
+    end;
+  z := PathRepresentative(p,i-1,ladder);
+  tmp := Stabilizer(orbAndStab.C[i-1]^(z^-1),ladder.transversal[i],ladder.transversal[i][min],homAct); 
+  orbAndStab.C[i] := tmp^z; 
+
+  # A_ipz^-1c is smallest in its C_{i-1} orbit
+  # z := PathRepresentative(p,i-1,ladder);
+  # U := ConjugateGroup(orbAndStab.C[i-1],z^-1);
+  # tmp := FindOrbitRep( p*z^-1, i, U, ladder );
+  # c := tmp.canonizer;
+  # # A_ipz^-1 = A_ipz^-1c
+  # if not (p*z^-1*c)*(p*z^-1)^-1 in ladder.chain[i] then
+  #   return c^z;
+  # fi;
+  # orbAndStab.C[i] := ConjugateGroup(tmp.stabilizer,z);
   return One(p);
 end;
 
