@@ -1,30 +1,6 @@
 
 
 
-LowerOrEqualPath := function( a, b, k, ladder)
-  local position_a, position_b, canonical, i;
-  for i in [ 2 .. k ] do
-    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      # perm_a := Image(ladder.hom[i],a);
-      # position_a := 1^perm_a;
-      # perm_b := Image(ladder.hom[i],b);
-      # position_b := 1^perm_b;
-      position_a := PositionCanonical(ladder.transversal[i],a);
-      position_b := PositionCanonical(ladder.transversal[i],b);
-      if  position_a < position_b then
-        return true;
-      elif  position_a > position_b  then 
-        return false;
-      fi;
-      canonical := ladder.transversal[i][position_a];
-      a := a*canonical^-1;
-      b := b*canonical^-1;
-    fi; 
-  od;
-  return true;
-end;
-
-
 
 
 

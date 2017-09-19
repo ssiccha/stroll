@@ -26,24 +26,6 @@ end;
 
 
 
-test := function(i,k)
-  local ladder, U, g, s, u;
-  ladder := makeStandardPermutationLadder(k);
-  U := ladder.chain[i];
-  g := Random(ladder.G);
-  Print("found random element ",g,"\n");
-  s := SmallestStrongPathToCoset(g,i,ladder);
-  for u in U do
-    if false = ladder.BoolLowerOrEqualPath(s,u*g,i,ladder) then
-      Print("Fehler gefunden \n"); 
-    fi;  
-  od;
-  if not s*g^-1 in U then
-    Print("Fehler gefunden \nElement is not in coset"); 
-  fi;
-end;
-
-
 LeiterspielLightDoubleCosets := function(k,B,ladder)
   local orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
   orbAndStab := rec();
@@ -161,23 +143,6 @@ LeiterspielLightCanonizeCoset := function( g, k, ladder, B )
 end;
 
 
-
-BruteForceCanonizeCoset := function( g, k, ladder, B )
-  local gu, orbit, smallest, o;
-  gu := RightCoset(ladder.chain[k],g);  
-  orbit := Orbit(B,gu,OnRight);
-  smallest := orbit[1];
-  smallest := Representative(smallest);
-  smallest := SmallestStrongPathToCoset(smallest, k, ladder);
-  for o in orbit do
-    o := Representative(o);
-    o := SmallestStrongPathToCoset(o,k,ladder);
-    if not LowerOrEqualPath(smallest, o, k, ladder) then
-      smallest := o;
-    fi;
-  od;
-  return smallest;
-end;
 
 CreateRandomGraphWithLadderAndB := function(i, n)
   local ladder, B, g, result;
