@@ -206,11 +206,12 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
           ,makeGraphGroup
           ,makeStandardPermutationLadder
           ,LeiterspielLightDoubleCosets
-          ,LowerOrEqualInStabilizerOf_p
           ,PathRepresentative
-          ,SmallestOrbitRepresentativeInStabilizerOf_p
+          ,BlockStabilizerOrbit
           ,SmallestStrongPathToCoset
           ,SplitOrbit
+          ,BlockStabilizerPosition
+          ,ReinitializeOrbitAndStabilizerStorage
           ];
   ProfileFunctions(fkts);
   LeiterspielLightGraphGeneration(n,k);

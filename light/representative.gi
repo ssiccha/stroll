@@ -23,18 +23,6 @@ end;
 
 
 
-# A_i <= A_{i-1} and a and b are in the preimage of A_{i-1}p;
-LowerOrEqualInStabilizerOf_p := function( a, b, i, orbAndStab, ladder )
-  local U, z, position_a, position_b;
-  z := orbAndStab.z[i];
-  position_a := PositionCanonical(ladder.transversal[i],a*z^-1);        
-  position_b := PositionCanonical(ladder.transversal[i],b*z^-1);        
-  if position_a <= position_b then
-    return true; 
-  fi;
-  return false;
-end;
-
 
 FindOrbitRep := function( g, k, V, ladder)
   local result, transv, U, H, versionSwitchOrbitAlgorithm, omega, V_Image, gp, tmp, mp, gens, acts, homAct, ug, um;
@@ -208,19 +196,22 @@ ReinitializeOrbitAndStabilizerStorage := function(p,n,orbAndStab,ladder)
 end;
 
 
+BlockStabilizerPosition := function(g,i,orbAndStab,ladder)
+  local z, pos;
+  z := orbAndStab.z[i];
+  pos := PositionCanonical(ladder.transversal[i],g*z^-1);
+  return pos;
+end;
+
+
 
 # A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
-SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, orbAndStab, ladder )
-  local z, pos, isInOrbit, min, U, gensPreimage, gensImage, isPointStabilizer, canonizer, options, orbit, pnt, word, j;
+BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
+  local z, g, isInOrbit, orbit, min, gensImage, isPointStabilizer, options, orbitInfo, j;
+
   if i = 1 then
-    return One(g); 
+    return One(ladder.chain[1]); 
   fi;
-
-
-  # initialize g and pos 
-  z := orbAndStab.z[i];
-  g := g*z^-1;
-  pos := PositionCanonical(ladder.transversal[i],g);
 
   # check, if pos is in one of the known orbits
   isInOrbit := false;
@@ -271,10 +262,20 @@ SmallestOrbitRepresentativeInStabilizerOf_p := function( g, i, p, orbAndStab, la
       Add(orbAndStab.min[i],pos);
     fi;
   fi;
+  orbitInfo := rec(min := min, orbit := orbit);
+  return orbitInfo;
+end;
 
+
+
+
+
+BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
+  local gensPreimage, canonizer, z, pnt, word;
   # find canonizing element
-  canonizer := One(g);
   gensPreimage := orbAndStab.gensOfStab[i]; 
+  z := orbAndStab.z[i];
+  canonizer := One(z);
   if not orbit[1] = pos then
     # find mapping of pos on orbit[1] 
     pnt := Position(orbit,pos);

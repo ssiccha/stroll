@@ -71,22 +71,28 @@ end;
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 SplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
-  local g, b, i, preimage, c, tmp, newBlock, h;
+  local g, b, i, small, preimage, pos, orbitInfo, min, c, h;
   # p := orbAndStab.p;
   g := block.g;
   b := block.b;
   i := block.i;
+  small := BlockStabilizerPosition( p, i+1, orbAndStab, ladder );
   # preimage is a transversal of E[k][i+1]\E[k][i];
   preimage := ladder.splitTransversal[k][i+1]; 
   for h in preimage do
-    c := SmallestOrbitRepresentativeInStabilizerOf_p( h*g*b, i+1, p, orbAndStab, ladder );
-    if false = LowerOrEqualInStabilizerOf_p( p, h*g*b*c, i+1, orbAndStab, ladder) then
-      return b*c;
-    elif false = LowerOrEqualInStabilizerOf_p( h*g*b*c, p, i+1, orbAndStab, ladder) then
+    pos := BlockStabilizerPosition( h*g*b, i+1, orbAndStab, ladder );
+    orbitInfo := BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
+    min := orbitInfo.min;
+    if small < min then
       continue;
     fi;
-    newBlock := rec( g := h*g, b := b*c, i := i+1 );
-    StackPush(blockStack,newBlock);
+    c := BlockStabilizerCanonizingElmnt( i+1, orbitInfo.orbit, pos, min, orbAndStab);
+    if small > min then
+      return b*c;
+    else
+      block := rec( g := h*g, b := b*c, i := i+1 );
+      StackPush(blockStack,block);
+    fi;
   od;
   return One(g); 
 end;
