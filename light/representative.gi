@@ -22,7 +22,7 @@ end;
 
 
 
-ReinitializeOrbitAndStabilizerStorage := function(p,n,orbAndStab,ladder)
+BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
   local U, permlist, i;
   # initialize data storage
   if not IsBound(orbAndStab.p) then

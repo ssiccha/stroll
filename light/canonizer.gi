@@ -15,7 +15,7 @@
 # Given the index k, a ladder [A_1,..,A_k] and an element g \in A_1 this function calculates the 
 # smallest strong path of length k, whose last component is the coset A_kg.
 #
-SmallestStrongPathToCoset := function( g, k, ladder )
+StroLLSmallestPathToCoset := function( g, k, ladder )
   local z, position, preimage, tmp, hsmall, canonical, i, h;
   z := One(ladder.G);
   for i in [ 2 .. k ] do
@@ -46,7 +46,7 @@ end;
 
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
-SplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
+StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   local g, b, i, small, preimage, pos, o, min, c, h;
   # p := orbAndStab.p;
   g := block.g;
@@ -77,8 +77,8 @@ end;
 
 
 # Several A_ig yield the same A_{i+1}g.
-# FuseOrbit only puts exactly one of them onto the stack
-FuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
+# StroLLLightFuseOrbit only puts exactly one of them onto the stack
+StroLLLightFuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
   local g, i, b, c;
   # p := orbAndStab.p;
   g := block.g;
@@ -106,9 +106,9 @@ end;
 # for a smaller path.
 # If it finds a smaller path it returns a c with A_kpc < A_kp
 # It also calculates the stabilizer of A_kp in B.
-CheckSmallestInDoubleCosetFuse := function( k, p, orbAndStab, ladder)
+StroLLLightFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
   local one, block, i, blockStack, b, isSplitStep, canonizer;
-  ReinitializeOrbitAndStabilizerStorage(p,k-1,orbAndStab, ladder);
+  BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
   one := One(p);
   orbAndStab.C[k] := orbAndStab.C[k-1];
   block := rec( g := p, b := one, i := 1);
@@ -123,12 +123,12 @@ CheckSmallestInDoubleCosetFuse := function( k, p, orbAndStab, ladder)
     else
       isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
       if isSplitStep then
-        canonizer := SplitOrbit(block,blockStack,p,k,orbAndStab,ladder);
+        canonizer := StroLLLightSplitOrbit(block,blockStack,p,k,orbAndStab,ladder);
         if not canonizer = one then
           return canonizer; 
         fi;
       else
-        FuseOrbit(block,blockStack,p,orbAndStab,ladder);
+        StroLLLightFuseOrbit(block,blockStack,p,orbAndStab,ladder);
       fi;
     fi;
   od;
@@ -137,9 +137,9 @@ end;
 
 
 
-CheckSmallestInDoubleCosetSplit := function( i, p, orbAndStab, ladder) 
+StroLLLightSplitCanonicalDCReps := function( i, p, orbAndStab, ladder) 
   local pos, o, min, c, homAct, z, tmp;
-  ReinitializeOrbitAndStabilizerStorage(p,i,orbAndStab,ladder);
+  BlockStabilizerReinitialize(p,i,orbAndStab,ladder);
   pos := BlockStabilizerPosition( p, i, orbAndStab, ladder );
   o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
   min := o.min;
@@ -159,19 +159,19 @@ end;
 
 
 
-FindSmallerOrbitRepresentative := function(g, k, ladder, B)
+StroLLLightFindSmallerDCRep := function(g, k, ladder, B)
   local result, orbAndStab, p, canonizer, i;
   orbAndStab := rec();
   orbAndStab.C := [B];
   result := rec(isCanonical := false, 
                 canonizer := One(g), 
                 stabilizer := Group(One(g)));
-  p := SmallestStrongPathToCoset(g,k,ladder);
+  p := StroLLSmallestPathToCoset(g,k,ladder);
   for i in [ 2 .. k ] do
     if  ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i]  then
-      canonizer := CheckSmallestInDoubleCosetSplit(i,p,orbAndStab,ladder); 
+      canonizer := StroLLLightSplitCanonicalDCReps(i,p,orbAndStab,ladder); 
     else
-      canonizer := CheckSmallestInDoubleCosetFuse(i,p,orbAndStab,ladder);
+      canonizer := StroLLLightFuseCanonicalDCReps(i,p,orbAndStab,ladder);
     fi;
     if not canonizer = One(canonizer) then
       result.canonizer := canonizer;

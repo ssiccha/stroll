@@ -1,6 +1,6 @@
 
 
-makeStandardPermutationLadder := function(n)
+StandardPermutationLadder := function(n)
   local groups, gens, i;
   groups := [SymmetricGroup(n)];
   groups[2] := Stabilizer(groups[1],1);
@@ -15,7 +15,7 @@ makeStandardPermutationLadder := function(n)
 end;
 
 
-makeGraphGroup := function(n)
+GraphGroup := function(n)
   local omega, hom;
   omega := Orbit( SymmetricGroup(n), [1,2], OnSets ); 
   omega := List(omega);
@@ -26,7 +26,7 @@ end;
 
 
 
-LeiterspielLightDoubleCosets := function(k,B,ladder)
+StroLLLightDoubleCosets := function(k,B,ladder)
   local one, orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
   one := One(B);
   orbAndStab := rec();
@@ -48,7 +48,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       V := ladder.cut1toI[i-1];
       preimage := RightTransversal(V,U);
       for h in preimage do
-        canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,orbAndStab,ladder);
+        canonizer := StroLLLightSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
         if one = canonizer then
           coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
           Add(L[i],coset);
@@ -61,7 +61,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # If p is the smallest path to A_ip, then 
       # A_ig should be constructed from the coset A_{i-1}p.
       # So the check for canonity can be done with this z: 
-      z := SmallestStrongPathToCoset(g,i,ladder);
+      z := StroLLSmallestPathToCoset(g,i,ladder);
       if not g*z^-1 in ladder.chain[i-1] then
         continue;
       fi;
@@ -70,7 +70,7 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # This is a depth first search algorithm so all stabilizers 
       # besides the last one stay unchanged.
       orbAndStab.C[i-1] := coset.stabilizer;
-      canonizer := CheckSmallestInDoubleCosetFuse(i,g,orbAndStab,ladder);
+      canonizer := StroLLLightFuseCanonicalDCReps(i,g,orbAndStab,ladder);
       if not one = canonizer then
         # this coset can be constructed from a smaller coset
         continue;
@@ -101,9 +101,9 @@ LeiterspielLightGraphGeneration := function(n,k)
     return;
   fi;
   graphs := [1];
-  B := makeGraphGroup(n);
-  ladder := makeStandardPermutationLadder(n*(n-1)/2);
-  cosets := LeiterspielLightDoubleCosets(k*2,B,ladder);
+  B := GraphGroup(n);
+  ladder := StandardPermutationLadder(n*(n-1)/2);
+  cosets := StroLLLightDoubleCosets(k*2,B,ladder);
   for i in [ 1 .. k ] do 
     m := Size(cosets[2*i]);
     Print(m," graphs with ",i," edges\n"); 
@@ -127,7 +127,7 @@ LeiterspielLightCanonizeCoset := function( g, k, ladder, B )
   local c, result;
   c := One(g);
   repeat
-    result := FindSmallerOrbitRepresentative(g,k,ladder,B);
+    result := StroLLLightFindSmallerDCRep(g,k,ladder,B);
     c := result.canonizer;
     g := g*c;
     if not c = One(c) then
@@ -141,11 +141,11 @@ end;
 
 CreateRandomGraphWithLadderAndB := function(i, n)
   local ladder, B, g, result;
-  ladder := makeStandardPermutationLadder(n*(n-1)/2);
+  ladder := StandardPermutationLadder(n*(n-1)/2);
   if i > Size(ladder.chain)  then
     Error("there is no ladder group for such a big index i"); 
   fi;
-  B := makeGraphGroup(n); 
+  B := GraphGroup(n); 
   g := PseudoRandom(ladder.G);
   result := rec( g := g, ladder := ladder, B := B );
   return result;
@@ -158,20 +158,20 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
   local fkts;
   ClearProfile();
   fkts := [CanonicalRightCosetElement
-          ,CheckSmallestInDoubleCosetSplit
-          ,CheckSmallestInDoubleCosetFuse
-          ,FindOrbitRep
-          ,FindSmallerOrbitRepresentative
-          ,FuseOrbit
-          ,makeGraphGroup
-          ,makeStandardPermutationLadder
-          ,LeiterspielLightDoubleCosets
+          ,StroLLLightSplitCanonicalDCReps
+          ,StroLLLightSplitCanonicalDCReps
+#         ,FindOrbitRep
+          ,StroLLLightFindSmallerDCRep
+          ,StroLLLightFuseOrbit
+          ,GraphGroup
+          ,StandardPermutationLadder
+          ,StroLLLightDoubleCosets
           ,PathRepresentative
           ,BlockStabilizerOrbit
-          ,SmallestStrongPathToCoset
-          ,SplitOrbit
+          ,StroLLSmallestPathToCoset
+          ,StroLLLightSplitOrbit
           ,BlockStabilizerPosition
-          ,ReinitializeOrbitAndStabilizerStorage
+          ,BlockStabilizerReinitialize
           ];
   ProfileFunctions(fkts);
   LeiterspielLightGraphGeneration(n,k);
