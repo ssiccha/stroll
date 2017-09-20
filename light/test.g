@@ -27,7 +27,8 @@ end;
 
 
 LeiterspielLightDoubleCosets := function(k,B,ladder)
-  local orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
+  local one, orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
+  one := One(B);
   orbAndStab := rec();
   orbAndStab.C := [B];
   cosetStack := StackCreate(100);
@@ -47,11 +48,8 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       V := ladder.cut1toI[i-1];
       preimage := RightTransversal(V,U);
       for h in preimage do
-        # stab is more efficient then B
-        # orbAndStab.C[i-1] := stab;
-        # z := SmallestStrongPathToCoset(h*g,i,ladder);
         canonizer := CheckSmallestInDoubleCosetSplit(i,h*g,orbAndStab,ladder);
-        if One(g) = canonizer then
+        if one = canonizer then
           coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
           Add(L[i],coset);
           if not i = k then
@@ -73,18 +71,12 @@ LeiterspielLightDoubleCosets := function(k,B,ladder)
       # besides the last one stay unchanged.
       orbAndStab.C[i-1] := coset.stabilizer;
       canonizer := CheckSmallestInDoubleCosetFuse(i,g,orbAndStab,ladder);
-      if not One(g) = canonizer then
-        # coset can be constructed from a smaller coset
+      if not one = canonizer then
+        # this coset can be constructed from a smaller coset
         continue;
       fi;
       coset := rec(g := g, stabilizer := orbAndStab.C[i], i := i);
       Add(L[i],coset);
-      #### DEBUG begin ####
-      # cut := Intersection(B^(g^-1),ladder.chain[i]);
-      # if not Size(coset.stabilizer) = Size(cut) then
-      #   Error("\nstabilizer sizes are not equal\n g = ",g," Size(stabilizer) = ",Size(coset.stabilizer)," Size(cut) = ",Size(cut)," stabilizer = ",coset.stabilizer,"\n\n");
-      # fi;
-      #### DEBUG end ####
       if not i = k then
         StackPush(cosetStack,coset);
       fi;
@@ -98,28 +90,31 @@ end;
 ## If a_i refers to the number of doublecosets in A_i\A_1/B,
 ## the sequence of all a_i with even index is a subsequence of A008406.
 LeiterspielLightGraphGeneration := function(n,k)
-  local ladder, B, cosets, sum, graphs, i;
-  if k < 2 or n < 3 then
+  local graphs, B, ladder, cosets, m, sum, i;
+  if n < 0 or k < 0 or k > n*(n-1)/2 then
+    Error("There are no graphs on ",n," vertices with up to ",k," edges\n");
     return;
   fi;
-  Print("Constructing all graphs on ",n," vertices with up to ",k," edges:\n");
-  ladder := makeStandardPermutationLadder(n*(n-1)/2);
+  Print("\nConstructing all graphs on ",n," vertices with up to ",k," edges:\n");
+  Print(1," graphs with ",0," edges\n"); 
+  if k < 1 or n < 2 then
+    return;
+  fi;
+  graphs := [1];
   B := makeGraphGroup(n);
+  ladder := makeStandardPermutationLadder(n*(n-1)/2);
   cosets := LeiterspielLightDoubleCosets(k*2,B,ladder);
-  sum := 0;
-  graphs := [Size(cosets[1])];
-  for i in [ 1 .. Size(cosets)  ] do 
-    if 0 = i mod 2 then 
-      graphs[i/2] := Size(cosets[i]);
-    fi; 
-  od;
-  for i in [ 1 .. Size(graphs)  ] do 
-    sum := sum + graphs[i];
-    Print(graphs[i]," graphs with ",i," edges\n"); 
+  for i in [ 1 .. k ] do 
+    m := Size(cosets[2*i]);
+    Print(m," graphs with ",i," edges\n"); 
+    graphs[i+1] := m; 
   od;
   Print("\n"); 
+  sum := 0;
   for i in [ 1 .. Size(graphs)  ] do 
-    Print(graphs[i],","); 
+    m := graphs[i];
+    Print(m,","); 
+    sum := sum + m;
   od;
   Print("\n\n",sum," graphs on ",n," vertices with up to ",k," edges\n"); 
   # return cosets;

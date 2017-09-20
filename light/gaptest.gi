@@ -154,17 +154,6 @@ CheckSmallestInDoubleCosetSplit := function( i, p, orbAndStab, ladder)
   z := PathRepresentative(p,i-1,ladder);
   tmp := Stabilizer(orbAndStab.C[i-1]^(z^-1),ladder.transversal[i],ladder.transversal[i][min],homAct); 
   orbAndStab.C[i] := tmp^z; 
-
-  # A_ipz^-1c is smallest in its C_{i-1} orbit
-  # z := PathRepresentative(p,i-1,ladder);
-  # U := ConjugateGroup(orbAndStab.C[i-1],z^-1);
-  # tmp := FindOrbitRep( p*z^-1, i, U, ladder );
-  # c := tmp.canonizer;
-  # # A_ipz^-1 = A_ipz^-1c
-  # if not (p*z^-1*c)*(p*z^-1)^-1 in ladder.chain[i] then
-  #   return c^z;
-  # fi;
-  # orbAndStab.C[i] := ConjugateGroup(tmp.stabilizer,z);
   return One(p);
 end;
 
