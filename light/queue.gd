@@ -11,8 +11,8 @@ DeclareFilter( "IsQueue" );
 DeclareFilter( "IsQueueNode" );
 
 # DeclareOperation( "QueueCreate", [] );
-QueueCreate := NewConstructor( "QueueCreate", [] );
 if not IsReadOnlyGlobal( "QueueCreate" ) then
+  QueueCreate := NewConstructor( "QueueCreate", [] );
   MakeReadOnlyGlobal( "QueueCreate" );
 fi;
 

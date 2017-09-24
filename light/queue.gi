@@ -56,7 +56,7 @@ InstallMethod( QueuePopFront, "pop the first object",
     node := queue!.first;
     queue!.first := node!.next;
     if 0 = queue!.size then
-      queue.last := fail; 
+      queue!.last := fail; 
     fi;
     return node!.obj; 
   end );
