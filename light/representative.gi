@@ -71,11 +71,38 @@ BlockStabilizerPosition := function(g,i,orbAndStab,ladder)
 end;
 
 
+BlockStabilizerOrbitFromGenerators := function(pos,gensImage,options)
+  local isPointStabilizer, orbit, min, j;
+  # element is not in one of the known orbits
+  options.schreier := true;
+  options.storenumbers := true;
+  isPointStabilizer := true;
+  for j in gensImage do
+    if not pos^j = pos then
+      isPointStabilizer := false; 
+      break;
+    fi; 
+  od;
+  if isPointStabilizer then
+    min := pos;
+    orbit := [pos];
+  else
+    orbit := Orb(gensImage,pos,OnPoints,options);
+    Enumerate(orbit);
+    min := pos;
+    for j in orbit do
+      if  min > j then
+        min := j; 
+      fi; 
+    od;
+  fi;
+  return rec(orbit := orbit, min := min);
+end;
+
 
 # A_i <= A_{i-1} and g is in the preimage of A_{i-1}p;
 BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
-  local z, g, isInOrbit, orbit, min, gensImage, isPointStabilizer, options, orbitInfo, j;
-
+  local isInOrbit, orbit, min, gensImage, options, tmp, orbitInfo, j;
   if i = 1 then
     return One(ladder.chain[1]); 
   fi;
@@ -91,44 +118,18 @@ BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
     fi;
   od;   
 
-  # element is not in one of the known orbits
   if not isInOrbit then
     # build up new orbit
     gensImage := orbAndStab.homImageGensOfStab[i]; 
-    isPointStabilizer := true;
-    for j in gensImage do
-      if not pos^j = pos then
-        isPointStabilizer := false; 
-        break;
-      fi; 
-    od;
-    if not isPointStabilizer then
-      options := rec();
-      if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-        options.grpsizebound := Size(orbAndStab.C[i-1]);
-      else
-        options.grpsizebound := Size(orbAndStab.C[i]);
-      fi;
-      options.orbsizebound := Size(ladder.transversal[i]);
-      options.schreier := true;
-      options.storenumbers := true;
-      orbit := Orb(gensImage,pos,OnPoints,options);
-      Enumerate(orbit);
-      min := pos;
-      for j in orbit do
-        if  min > j then
-          min := j; 
-        fi; 
-      od;
-      Add(orbAndStab.orbits[i],orbit);
-      Add(orbAndStab.min[i],min);
-    else
-      min := pos;
-      orbit := [pos];
-      Add(orbAndStab.orbits[i],orbit);
-      Add(orbAndStab.min[i],pos);
-    fi;
+    options := rec();
+    options.orbsizebound := Size(ladder.transversal[i]);
+    tmp := BlockStabilizerOrbitFromGenerators(pos,gensImage,options);
+    orbit := tmp.orbit;
+    min := tmp.min;
+    Add(orbAndStab.orbits[i],orbit);
+    Add(orbAndStab.min[i],min);
   fi;
+
   orbitInfo := rec(min := min, orbit := orbit);
   return orbitInfo;
 end;
@@ -136,12 +137,9 @@ end;
 
 
 
-
-BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
-  local gensPreimage, canonizer, z, pnt, word;
+BlockStabilizerCanElmntFromGenerators := function( orbit, pos, min, gensPreimage, z )
+  local canonizer, pnt, word;
   # find canonizing element
-  gensPreimage := orbAndStab.gensOfStab[i]; 
-  z := orbAndStab.z[i];
   canonizer := One(z);
   if not orbit[1] = pos then
     # find mapping of pos on orbit[1] 
@@ -149,15 +147,46 @@ BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
     word := TraceSchreierTreeForward(orbit,pnt);
     word := List(word, x -> gensPreimage[x]);
     word := Product(word)^-1;
-    canonizer := word^z;
+    canonizer := word;
   fi;
   if not min = orbit[1] then
     # find mapping of orbit[1] on min 
     pnt := Position(orbit,min);
     word := TraceSchreierTreeForward(orbit,pnt);
     word := List(word, x -> gensPreimage[x]);
-    canonizer := canonizer*Product(word)^z;
+    canonizer := canonizer*Product(word);
   fi;
-  return canonizer;
+  return canonizer^z;
 end;
+
+
+BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
+  local z, generators;
+  z := orbAndStab.z[i];
+  generators := orbAndStab.gensOfStab[i]; 
+  return BlockStabilizerCanElmntFromGenerators(orbit,pos,min,generators,z);
+end;
+
+
+# PathRepresentative := function(g,k,ladder)
+DCStoreFindCanonical := function(g,k,dcTree,ladder)
+  local node, c, position, z, i;
+  node := dcTree;
+  c := One(g);
+  for i in [ 2 .. k ] do
+    position := 1;
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      z := node.z;
+      position := PositionCanonical(ladder.transversal[i],g*c*z^-1);
+    fi;
+    node := node.child[position];
+    if false = node.isCanonical then
+      c := c*node.canonizingElmnt; 
+      node := node.canonical;
+    fi;
+  od;
+  return rec(rep := node, canonizingElmnt := c);
+end;
+
+
 

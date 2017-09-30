@@ -88,19 +88,19 @@ end;
 
 
 StroLLBreadthDoubleCosets := function(k,B,ladder)
-  local one, orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
+  local one, orbAndStab, cosetQueue, coset, stabilizer, i, L, g, stab, U, V, preimage, canonizer, z, h;
   one := One(B);
   orbAndStab := rec();
   orbAndStab.C := [B];
-  cosetStack := StackCreate(100);
+  cosetQueue := QueueCreate();
   coset := rec(g := One(B), stabilizer := B, i := 1);
-  StackPush(cosetStack,coset);
+  QueuePushBack(cosetQueue,coset);
   L := [ [coset] ];
   for i in [ 2 .. k ] do
     L[i] := [];
   od;
-  while not StackIsEmpty(cosetStack) do
-    coset := StackPop(cosetStack);
+  while not QueueEmpty(cosetQueue) do
+    coset := QueuePopFront(cosetQueue);
     g := coset.g;
     i := coset.i+1;
     stab := coset.stabilizer;
@@ -114,7 +114,7 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
           coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
           Add(L[i],coset);
           if not i = k then
-            StackPush(cosetStack,coset);
+            QueuePushBack(cosetQueue,coset);
           fi;
         fi;
       od;
@@ -139,7 +139,7 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
       coset := rec(g := g, stabilizer := orbAndStab.C[i], i := i);
       Add(L[i],coset);
       if not i = k then
-        StackPush(cosetStack,coset);
+        StackPush(cosetQueue,coset);
       fi;
     fi; 
   od;
