@@ -88,21 +88,22 @@ end;
 
 
 StroLLBreadthDoubleCosets := function(k,B,ladder)
-  local one, orbAndStab, cosetQueue, coset, stabilizer, i, L, g, stab, U, V, preimage, canonizer, z, h;
+  local one, orbAndStab, cosetStack, coset, stabilizer, i, L, g, stab, U, V, preimage, canonizer, z, h;
   one := One(B);
   orbAndStab := rec();
   orbAndStab.C := [B];
-  cosetQueue := QueueCreate();
+  cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
-  QueuePushBack(cosetQueue,coset);
+  StackPush(cosetStack,coset);
   L := [ [coset] ];
   for i in [ 2 .. k ] do
     L[i] := [];
   od;
-  while not QueueEmpty(cosetQueue) do
-    coset := QueuePopFront(cosetQueue);
+  while not StackIsEmpty(cosetStack) do
+    coset := StackPop(cosetStack);
     g := coset.g;
     i := coset.i+1;
+    Print("StackPop(",g,",",i-1,")\n");
     stab := coset.stabilizer;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
       U := ladder.cut1toI[i];
@@ -114,7 +115,8 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
           coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
           Add(L[i],coset);
           if not i = k then
-            QueuePushBack(cosetQueue,coset);
+            StackPush(cosetStack,coset);
+            Print("StackPush(",h*g,",",i,")\n");
           fi;
         fi;
       od;
@@ -126,6 +128,7 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
       if not g*z^-1 in ladder.chain[i-1] then
         continue;
       fi;
+      g := z;
       # In a breadth first search algorithm the stabilizer orbAndStab.C[i-1] 
       # could have been overwritten.
       # This is a depth first search algorithm so all stabilizers 
@@ -139,7 +142,8 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
       coset := rec(g := g, stabilizer := orbAndStab.C[i], i := i);
       Add(L[i],coset);
       if not i = k then
-        StackPush(cosetQueue,coset);
+        StackPush(cosetStack,coset);
+        Print("StackPush(",g,",",i,")\n");
       fi;
     fi; 
   od;

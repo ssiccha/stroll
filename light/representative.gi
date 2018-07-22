@@ -23,7 +23,7 @@ end;
 
 
 BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local U, permlist, i;
+  local U, permlist, i, x;
   # initialize data storage
   if not IsBound(orbAndStab.p) then
     orbAndStab.p := [];
@@ -176,7 +176,7 @@ DCStoreFindCanonical := function(g,k,dcTree,ladder)
   for i in [ 2 .. k ] do
     position := 1;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      z := node.z;
+      z := node.rep;
       position := PositionCanonical(ladder.transversal[i],g*c*z^-1);
     fi;
     node := node.child[position];
