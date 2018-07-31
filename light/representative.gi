@@ -22,32 +22,44 @@ end;
 
 
 
-BlockStabilizerReinitialize := function(p,i,orbAndStab,ladder)
-  local U, permlist, x;
-  # if p has changed, delete old data storage
-  if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-    if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
-      orbAndStab.p[i] := p;
-      orbAndStab.z[i] := PathRepresentative( p, i-1, ladder ); 
-      orbAndStab.orbits[i] := [];
-      orbAndStab.min[i] := [];
-      U := ConjugateGroup( orbAndStab.C[i-1], orbAndStab.z[i]^-1 );
-      orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-      permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
-      orbAndStab.homImageGensOfStab[i] := permlist; 
-    fi;
-  else
-    if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
-      orbAndStab.p[i] := p;
-      orbAndStab.z[i] := PathRepresentative( p, i, ladder ); 
-      orbAndStab.orbits[i] := [];
-      orbAndStab.min[i] := [];
-      U := ConjugateGroup( orbAndStab.C[i], orbAndStab.z[i]^-1 );
-      orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
-      permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
-      orbAndStab.homImageGensOfStab[i] := permlist; 
-    fi;
+BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
+  local U, permlist, i, x;
+  # initialize data storage
+  if not IsBound(orbAndStab.p) then
+    orbAndStab.p := [];
+    orbAndStab.z := [];
+    orbAndStab.orbits := [];
+    orbAndStab.min := [];
+    orbAndStab.gensOfStab := [];
+    orbAndStab.homImageGensOfStab := [];
   fi;
+    
+  for i in [ 2 .. n ] do
+    # if p has changed, delete old data storage
+    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
+        orbAndStab.p[i] := p;
+        orbAndStab.z[i] := PathRepresentative( p, i-1, ladder ); 
+        orbAndStab.orbits[i] := [];
+        orbAndStab.min[i] := [];
+        U := ConjugateGroup( orbAndStab.C[i-1], orbAndStab.z[i]^-1 );
+        orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        orbAndStab.homImageGensOfStab[i] := permlist; 
+      fi;
+    else
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        orbAndStab.p[i] := p;
+        orbAndStab.z[i] := PathRepresentative( p, i, ladder ); 
+        orbAndStab.orbits[i] := [];
+        orbAndStab.min[i] := [];
+        U := ConjugateGroup( orbAndStab.C[i], orbAndStab.z[i]^-1 );
+        orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        orbAndStab.homImageGensOfStab[i] := permlist; 
+      fi;
+    fi;
+  od;
 end;
 
 

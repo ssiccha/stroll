@@ -117,7 +117,7 @@ end;
 
 
 # Returns One(g) if no smaller element was found.
-# Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
+# Otherwise returns an element c s.t. A_{i+1}gc < A_{i+1}p
 StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   local g, b, i, small, preimage, pos, tmp, min, orbit, c, h;
   # p := orbAndStab.p;

@@ -112,22 +112,29 @@ end;
 
 
 StroLLBuildSubladder := function(ladder)
-  local split, i, j, U, V;
+  local cut, split, i, j, U, V;
+  ladder.cut1toI := [ladder.chain[1]];
+  ladder.cut1toJplusI := [[ladder.chain[1]]];
   ladder.splitTransversal := [];
   for i in [ 2 .. Size(ladder.chain) ] do
     # cut1tojplusi[i][j] = A_1 \cap .. \cap A_j \cap A_i;
+    cut := [ladder.chain[i]];
     split := []; 
     for j in [ 2 .. i ] do
       if ladder.subgroupIndex[j-1] < ladder.subgroupIndex[j] then
-        U := ladder.intersection[i][j-1]
-        V := ladder.intersection[i][j]
+        cut[j] := Intersection(ladder.chain[j],cut[j-1]);
+        U := ladder.intersection[i][j-1];
+        V := ladder.intersection[i][j];
         split[j] := RightTransversal(U,V);
       else 
-        U := ladder.intersection[i][j]
-        V := ladder.intersection[i][j-1]
+        cut[j] := cut[j-1];
+        U := ladder.intersection[i][j];
+        V := ladder.intersection[i][j-1];
         split[j] := RightTransversal(U,V);
       fi;
     od;
+    ladder.cut1toI[i] := cut[i];
+    ladder.cut1toJplusI[i] := cut; 
     ladder.splitTransversal[i] := split;
   od;
 end;

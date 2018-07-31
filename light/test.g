@@ -31,12 +31,6 @@ StroLLLightDoubleCosets := function(k,B,ladder)
   one := One(B);
   orbAndStab := rec();
   orbAndStab.C := [B];
-  orbAndStab.p := [];
-  orbAndStab.z := [];
-  orbAndStab.orbits := [];
-  orbAndStab.min := [];
-  orbAndStab.gensOfStab := [];
-  orbAndStab.homImageGensOfStab := [];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
   StackPush(cosetStack,coset);
@@ -50,7 +44,9 @@ StroLLLightDoubleCosets := function(k,B,ladder)
     i := coset.i+1;
     stab := coset.stabilizer;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      preimage := ladder.splitTransversal[k][i]; 
+      U := ladder.cut1toI[i];
+      V := ladder.cut1toI[i-1];
+      preimage := RightTransversal(V,U);
       for h in preimage do
         canonizer := StroLLLightSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
         if one = canonizer then
@@ -96,12 +92,6 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
   one := One(B);
   orbAndStab := rec();
   orbAndStab.C := [B];
-  orbAndStab.p := [];
-  orbAndStab.z := [];
-  orbAndStab.orbits := [];
-  orbAndStab.min := [];
-  orbAndStab.gensOfStab := [];
-  orbAndStab.homImageGensOfStab := [];
   cosetStack := StackCreate(100);
   coset := rec(g := One(B), stabilizer := B, i := 1);
   StackPush(cosetStack,coset);
@@ -116,10 +106,8 @@ StroLLBreadthDoubleCosets := function(k,B,ladder)
     Print("StackPop(",g,",",i-1,")\n");
     stab := coset.stabilizer;
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      # U := ladder.cut1toI[i];
-      # V := ladder.cut1toI[i-1];
-      U := ladder.intersection[k][i];
-      V := ladder.intersection[k][i-1];
+      U := ladder.cut1toI[i];
+      V := ladder.cut1toI[i-1];
       preimage := RightTransversal(V,U);
       for h in preimage do
         canonizer := StroLLBreadthSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
