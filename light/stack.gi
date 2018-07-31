@@ -114,3 +114,4 @@ InstallMethod( StackIsEmpty, "Checks whether stack is empty.",
 function( stack )
   return stack!.last = 0;
 end );
+

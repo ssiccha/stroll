@@ -326,10 +326,10 @@ StroLLLightSplitCanonicalDCReps := function( i, p, orbAndStab, ladder)
     c := BlockStabilizerCanonizingElmnt( i, o.orbit, pos, min, orbAndStab);
     return c; 
   fi;
-    homAct := function(x,h)
-      x := PositionCanonical(ladder.transversal[i],x*h);
-      return ladder.transversal[i][x];
-    end;
+  homAct := function(x,h)
+    x := PositionCanonical(ladder.transversal[i],x*h);
+    return ladder.transversal[i][x];
+  end;
   z := PathRepresentative(p,i-1,ladder);
   tmp := Stabilizer(orbAndStab.C[i-1]^(z^-1),ladder.transversal[i],ladder.transversal[i][min],homAct); 
   orbAndStab.C[i] := tmp^z; 
