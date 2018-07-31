@@ -5,6 +5,7 @@ Reread("queue.gd");
 Read("queue.gi");
 Read("ladder.gi");
 Read("representative.gi");
+Read("strollBreadth.gi");
 Read("canonizer.gi");
 Read("test.g");
 

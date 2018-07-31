@@ -190,3 +190,39 @@ end;
 
 
 
+
+# This function needs a ladder [A_1,..,A_k] and for all indizes i<k with A_i >= A_i+1 a total order
+# on the cosets A_i\A_i+1 must be defined. 
+#
+# For a given ladder [A_1,..,A_k] and elements a_1,..,a_k \in A_1 the tupel [A_1a_1,..,A_ka_k] is a 
+# strong path, if and only if there exist an element h \in A_1, so that 
+# [A_1h,..,A_kh] = [A_1a_1,..,A_ka_k].
+# The given total order allows it to define a total order on the set of strong paths of length up to k.
+# 
+# Given the index k, a ladder [A_1,..,A_k] and an element g \in A_1 this function calculates the 
+# smallest strong path of length k, whose last component is the coset A_kg.
+#
+StroLLSmallestPathToCoset := function( g, k, ladder )
+  local z, position, preimage, tmp, hsmall, canonical, i, h;
+  z := One(ladder.G);
+  for i in [ 2 .. k ] do
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      position := Size(ladder.transversal[i]) + 1;
+      preimage := ladder.splitTransversal[k][i]; 
+      for h in preimage do
+        # perm := Image(ladder.hom[i],h*g);
+        # tmp := 1^perm;
+        tmp := PositionCanonical(ladder.transversal[i],h*g);
+        if position > tmp then
+          position := tmp; 
+          hsmall := h;
+        fi;
+      od;
+      canonical := ladder.transversal[i][position];
+      g := hsmall*g*canonical^-1;
+      z := canonical*z;
+    fi; 
+  od;
+  return z;
+end; 
+

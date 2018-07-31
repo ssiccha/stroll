@@ -38,7 +38,7 @@
 #     record.subgroupIndex is a list of size n:
 #     For all i<n subgroupIndex[i] is equal to the subgroup index |G:A_i| 
 #   intersection:
-#     record.intersection is a square matrix of size n:
+##  #     record.intersection is a square matrix of size n:
 #     For all i,j intersection[i][j] is equal to the intersection of the
 #     groups U_i and U_j.
 #   homomorphism:
@@ -126,7 +126,7 @@ StroLLBuildSubladder := function(ladder)
         U := ladder.intersection[i][j-1];
         V := ladder.intersection[i][j];
         split[j] := RightTransversal(U,V);
-      else 
+      else
         cut[j] := cut[j-1];
         U := ladder.intersection[i][j];
         V := ladder.intersection[i][j-1];
