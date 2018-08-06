@@ -2,16 +2,22 @@
 # Returns One(g) if no smaller element was found.
 # Otherwise returns an element c s.t. A_{i+1}gc < A_{i+1}p
 StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
-  local g, b, i, small, preimage, pos, tmp, min, orbit, c, h;
+  local g, b, i, j, l, small, preimage, perm, pos, tmp, min, orbit, c, h, z;
   # p := orbAndStab.p;
   g := block.g;
   b := block.b;
   i := block.i;
+  z := orbAndStab.z[i];
+  perm := Image(ladder.hom[i+1],g*b*z^-1);
   small := BlockStabilizerPosition( p, i+1, orbAndStab, ladder );
-  # preimage is a transversal of E[k][i+1]\E[k][i];
-  preimage := ladder.splitTransversal[k][i+1]; 
-  for h in preimage do
-    pos := BlockStabilizerPosition( h*g*b, i+1, orbAndStab, ladder );
+  #small := orbAndStab.small[i+1];
+  # if small <> orbAndStab.small[i+1] then
+  #   Print("hier ist der Fehler");
+  #   return 2;
+  # fi;
+  preimage := ladder.preimage[k][i+1];
+  for l in [ 1 .. Size(preimage)] do
+    pos := preimage[l]^perm;
     tmp := BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
     min := tmp.min;
     orbit := tmp.orbit;
@@ -21,6 +27,7 @@ StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
       c := BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
       return b*c;
     else
+      h := ladder.splitTransversal[k][i+1][l];
       c := BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
       block := rec( g := h*g, b := b*c, i := i+1 );
       StackPush(blockStack,block);

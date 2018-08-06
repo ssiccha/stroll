@@ -30,10 +30,10 @@
 #   transversal:
 #     record.transversal is a list of size n: Each entry of this list
 #     is itself a list of coset representatives. 
-#     If A_i <= A_{i+1} then transversal[i] is a list of representatives 
-#     for the set A_i/A_{i+1} of right cosets;
-#     If A_i >= A_{i+1} then transversal[i] is a list of representatives 
-#     for the set U_i/U_{i+1} of right cosets;
+#     If A_i <= A_{i-1} then transversal[i] is a list of representatives 
+#     for the set A_i/A_{i-1} of right cosets;
+#     If A_i >= A_{i-1} then transversal[i] is a list of representatives 
+#     for the set U_i/U_{i-1} of right cosets;
 #   subgroupIndex:
 #     record.subgroupIndex is a list of size n:
 #     For all i<n subgroupIndex[i] is equal to the subgroup index |G:A_i| 
@@ -42,24 +42,27 @@
 #     For all i,j intersection[i][j] is equal to the intersection of the
 #     groups U_i and U_j.
 #   homomorphism:
-#     If A_i <= A_{i+1} then hom[i] is the action of the group A[i+1] on the
+#     If A_i <= A_{i-1} then hom[i] is the action of the group A[i-1] on the
 #     cosets of group A_i
-#     If A_{i+1} <= A_i then hom[i] is the action of the group A[i] on the
-#     cosets of group A_{i+1}
+#     If A_{i-1} <= A_i then hom[i] is the action of the group A[i] on the
+#     cosets of group A_{i-1}
 #   rightcosets:
-#     If A_i <= A_{i+1} then rightcosets[i] stores the rightcosets 
-#     of A_i in A_{i+1} 
-#     If A_{i+1} <= A_i then rightcosets[i] stores the rightcosets 
-#     of A_{i+1} in A_i 
+#     If A_i <= A_{i-1} then rightcosets[i] stores the rightcosets 
+#     of A_i in A_{i-1} 
+#     If A_{i-1} <= A_i then rightcosets[i] stores the rightcosets 
+#     of A_{i-1} in A_i 
 StroLLBuildTransversal := function(subgroup)
   local one, ladder, U, V, tmp, i, j;
   one := One(subgroup[1]);
   ladder := rec();
   ladder.G := subgroup[1];
-  ladder.chain := [subgroup[1]]; 
+  ladder.chain := []; 
+  ladder.chain[1] := subgroup[1]; 
   ladder.subgroupIndex := [1];
-  ladder.transversal := [RightTransversal(ladder.G,ladder.G)];
-  ladder.rightcosets := [RightCosets(ladder.G,ladder.G)];
+  ladder.transversal := [];
+  ladder.transversal[1] := RightTransversal(ladder.G,ladder.G);
+  ladder.rightcosets := [];
+  ladder.rightcosets[1] := RightCosets(ladder.G,ladder.G);
   ladder.hom := [];
   for i in [2 .. Size(subgroup)] do
     ladder.chain[i] := subgroup[i];
@@ -112,25 +115,36 @@ end;
 
 
 StroLLBuildSubladder := function(ladder)
-  local cut, split, i, j, U, V;
+  local cut, split, pos, h, i, j, U, V;
   ladder.cut1toI := [ladder.chain[1]];
   ladder.cut1toJplusI := [[ladder.chain[1]]];
   ladder.splitTransversal := [];
+  ladder.preimage := [];
   for i in [ 2 .. Size(ladder.chain) ] do
     # cut1tojplusi[i][j] = A_1 \cap .. \cap A_j \cap A_i;
     cut := [ladder.chain[i]];
     split := []; 
+    ladder.preimage[i] := [];
     for j in [ 2 .. i ] do
+      ladder.preimage[i][j] := [];
       if ladder.subgroupIndex[j-1] < ladder.subgroupIndex[j] then
         cut[j] := Intersection(ladder.chain[j],cut[j-1]);
         U := ladder.intersection[i][j-1];
         V := ladder.intersection[i][j];
         split[j] := RightTransversal(U,V);
+        for h in split[j] do
+          pos := PositionCanonical(ladder.transversal[j],h);
+          Append(ladder.preimage[i][j],[pos]);
+        od;
       else
         cut[j] := cut[j-1];
         U := ladder.intersection[i][j];
         V := ladder.intersection[i][j-1];
         split[j] := RightTransversal(U,V);
+        for h in split[j] do
+          pos := PositionCanonical(ladder.transversal[j],h);
+          Append(ladder.preimage[i][j],[pos]);
+        od;
       fi;
     od;
     ladder.cut1toI[i] := cut[i];

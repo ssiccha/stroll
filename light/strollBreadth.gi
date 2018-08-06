@@ -3,7 +3,6 @@
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladder )
   local transv, block, g, b, i, dc, z, stab, generators, gensImage, options, small, homAct, preimage, pos, tmp, min, orbit, c, child, h;
-  # p := orbAndStab.p;
   block := QueuePopFront(blockQueue);
   dc := block.dc;
   i := block.i;
@@ -11,7 +10,6 @@ StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladde
   b := block.b;
   transv := ladder.transversal[i+1];
   small := BlockStabilizerPosition( p, i+1, orbAndStab, ladder );
-  dc.child := [];
   # preimage is a transversal of E[k][i+1]\E[k][i];
   preimage := ladder.splitTransversal[k][i+1]; 
   for h in preimage do
@@ -24,28 +22,31 @@ StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladde
     min := tmp.min;
     orbit := tmp.orbit;
     if small < min then
+      # here the whole orbit is dismissed!
+      for tmp in orbit do
+        dc.child[tmp] := 0;
+      od;
       continue;
     elif small > min then
       c := BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
       return b*c;
     else
-      stab := dc.stabilizer;
-      z := dc.z;
-      # create and append new block on the queue
-      c := BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
-      block := rec( g := h*g, b := b*c, i := i+1 );
-      QueuePushBack(blockQueue,block);
-      # create node for representative
+      z := orbAndStab.z[i];
+      stab := block.stab;
       homAct := function(x,h)
         x := PositionCanonical(transv,x*h);
         return transv[x];
       end;
-      child := rec();
-      child.isCanonical := true; 
-      child.stabilizer := Stabilizer(stab^(z^-1),transv,transv[pos],homAct)^z; 
-      child.z := orbAndStab.z[i+1]*c^-1*b^-1; 
+      # create node for representative
+      child := rec(child := []);
+      child.canonical := child;
       dc.child[pos] := child;
+      # create and append new block on the queue
+      c := BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
+      block := rec( g := h*g, b := b*c, i := i+1 );
       block.dc := child;
+      block.stab := Stabilizer(stab^(z^-1),transv,transv[pos],homAct)^z; 
+      QueuePushBack(blockQueue,block);
       # calculate orbit of old block stabilizer 
       generators := List(GeneratorsOfGroup(stab)); 
       gensImage := List(generators, x -> Image(ladder.hom[i+1],x));
@@ -57,8 +58,7 @@ StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladde
       for tmp in orbit do
         if not pos = tmp then
           child := rec();
-          child.isCanonical := false; 
-          child.canonizingElmnt := 
+          child.canonizer := 
           BlockStabilizerCanElmntFromGenerators(orbit,tmp,pos,generators,dc.z); 
           child.canonical := dc.child[pos];
           dc.child[tmp] := child;
@@ -81,7 +81,7 @@ StroLLBreadthFuseOrbit := function( dcTree, blockQueue, p, orbAndStab, ladder )
   b := block.b;
   dc := block.dc;
   if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
-    child := rec( isCanonical := true, stabilizer := dc.stabilizer, z := dc.z );
+    child := rec( stabilizer := dc.stabilizer, z := dc.z );
     dc.child := [child];
     Unbind(dc.stabilizer);
     block := rec( g := g, b := b, i := i+1, dc := child );
@@ -92,7 +92,7 @@ StroLLBreadthFuseOrbit := function( dcTree, blockQueue, p, orbAndStab, ladder )
   if IsBound(dc.child) then
     return;
   else
-    child := rec( isCanonical := true, stabilizer := dc.stabilizer, rep := dc.rep );
+    child := rec( stabilizer := dc.stabilizer, rep := dc.rep );
     dc.child := [child];
     representatives := [];
     pos := BlockStabilizerPosition( g*b, i+1, orbAndStab, ladder );
@@ -105,7 +105,6 @@ StroLLBreadthFuseOrbit := function( dcTree, blockQueue, p, orbAndStab, ladder )
       if IsIdenticalObj(dc,x.rep) then
         child.stabilizer := ClosureGroup(child.stabilizer,c);
       else
-        x.rep.isCanonical := false;
         x.rep.canonizingElmnt := x.canonizingElmnt^-1*b*c^-1*b^-1;
         x.rep.canonical := dc;
       fi;
@@ -127,8 +126,10 @@ StroLLBreadthFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
   BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
   one := One(p);
   orbAndStab.C[k] := orbAndStab.C[k-1];
-  dcTree := rec( isCanonical := true, stabilizer := orbAndStab.C[k], rep := one );
+  dcTree := rec(canonizer := one, child := [] );
+  dcTree.canonical := dcTree;
   block := rec( g := p, b := one, i := 1, dc := dcTree);
+  block.stab := orbAndStab.C[k];
   blockQueue := QueueCreate();
   QueuePushBack(blockQueue, block);
   while not QueueEmpty(blockQueue) do
@@ -137,7 +138,7 @@ StroLLBreadthFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
     if i+1 = k then
       QueuePopFront(blockQueue);
       b := block.b;
-      orbAndStab.C[i+1] := ClosureGroup(orbAndStab.C[i+1],b);
+      orbAndStab.C[k] := ClosureGroup(orbAndStab.C[k],b);
     else
       isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
       if isSplitStep then
