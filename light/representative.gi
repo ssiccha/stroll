@@ -18,7 +18,7 @@ end;
 
 
 BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local z, pos, canon, g, U, permlist, i;
+  local z, pos, canon, U, permlist, i;
   # initialize data storage
   if not IsBound(orbAndStab.p) then
     orbAndStab.p := [];
@@ -30,18 +30,14 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     orbAndStab.homImageGensOfStab := [];
   fi;
     
-  g := p;
-  z := One(p); 
   for i in [ 2 .. n ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      g := p*z^-1;
-      pos := PositionCanonical(ladder.pathTransversal[i],g);
-      canon := ladder.pathTransversal[i][pos];
-      g := g*canon^-1;
-      z := canon*z;
-      orbAndStab.z[i] := z;
       # if p has changed, delete old data storage
       if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        z := orbAndStab.z[i-1];
+        pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
+        canon := ladder.pathTransversal[i][pos];
+        orbAndStab.z[i] := canon*z;
         orbAndStab.p[i] := p;
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
@@ -51,9 +47,9 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.homImageGensOfStab[i] := permlist; 
       fi;
     else
-      orbAndStab.z[i] := z;
       # if p has changed, delete old data storage
       if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
+        orbAndStab.z[i] := orbAndStab.z[i-1];
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
         U := ConjugateGroup( orbAndStab.C[i], orbAndStab.z[i]^-1 );
