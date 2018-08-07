@@ -1,19 +1,14 @@
-
-
+# for every path [A_1g,..,A_kg] there exists a canonical h in G
+# so that [A_1h,..,A_kh] = [A_1g,..,A_kg]
 PathRepresentative := function(g,k,ladder)
-  local z, position, canonical, i;
+  local z, pos, map, canon, i;
   z := One(g); 
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      # perm := Image(ladder.hom[i],g);
-      # position := 1^perm;
-      position := PositionCanonical(ladder.transversal[i],g);
-      # if not position = position2 then
-      #   Error("the positioning via homomorphism is not correct"); 
-      # fi;
-      canonical := ladder.transversal[i][position];
-      g := g*canonical^-1;
-      z := canonical*z;
+      pos := PositionCanonical(ladder.pathTransversal[i],g);
+      canon := ladder.pathTransversal[i][pos];
+      g := g*canon^-1;
+      z := canon*z;
     fi;
   od;
   return z;
@@ -23,7 +18,7 @@ end;
 
 
 BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local U, permlist, i, x, tmp, z, pos;
+  local U, permlist, i;
   # initialize data storage
   if not IsBound(orbAndStab.p) then
     orbAndStab.p := [];
@@ -41,11 +36,13 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
       if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
         orbAndStab.p[i] := p;
-        z := orbAndStab.z[i-1];
-        tmp := p*z^-1;
-        pos := PositionCanonical(ladder.transversal[i],tmp);
-        orbAndStab.z[i] := ladder.transversal[i][pos]*z;
+        #z := orbAndStab.z[i-1];
+        #tmp := p*z^-1;
+        #pos := PositionCanonical(ladder.pathTransversal[i],tmp);
+        #pos := PositionCanonical(ladder.transversal[i],tmp);
+        #orbAndStab.z[i] := ladder.pathTransversal[i][pos]*z;
         # orbAndStab.small[i] := pos;
+        orbAndStab.z[i] := PathRepresentative( p, i, ladder ); 
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
         U := ConjugateGroup( orbAndStab.C[i-1], orbAndStab.z[i-1]^-1 );
@@ -73,15 +70,19 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
 end;
 
 
-BlockStabilizerPosition := function(g,i,orbAndStab,ladder)
+BlockPosition := function(g,i,orbAndStab,ladder)
   local z, pos;
-  z := orbAndStab.z[i-1];
+  if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+    z := orbAndStab.z[i-1];
+  else
+    z := orbAndStab.z[i];
+  fi;
   pos := PositionCanonical(ladder.transversal[i],g*z^-1);
   return pos;
 end;
 
 
-BlockStabilizerOrbitFromGenerators := function(pos,gensImage,options)
+OrbitFromGenerators := function(pos,gensImage,options)
   local isPointStabilizer, orbit, min, j;
   # element is not in one of the known orbits
   options.schreier := true;
@@ -133,7 +134,7 @@ BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
     gensImage := orbAndStab.homImageGensOfStab[i]; 
     options := rec();
     options.orbsizebound := Size(ladder.transversal[i]);
-    tmp := BlockStabilizerOrbitFromGenerators(pos,gensImage,options);
+    tmp := OrbitFromGenerators(pos,gensImage,options);
     orbit := tmp.orbit;
     min := tmp.min;
     Add(orbAndStab.orbits[i],orbit);
@@ -178,59 +179,59 @@ BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
 end;
 
 
-# PathRepresentative := function(g,k,ladder)
-DCStoreFindCanonical := function(g,k,dcTree,ladder)
-  local node, c, position, z, i;
-  node := dcTree;
-  c := One(g);
-  for i in [ 2 .. k ] do
-    position := 1;
-    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      z := node.rep;
-      position := PositionCanonical(ladder.transversal[i],g*c*z^-1);
-    fi;
-    node := node.child[position];
-    if false = node.isCanonical then
-      c := c*node.canonizingElmnt; 
-      node := node.canonical;
-    fi;
-  od;
-  return rec(rep := node, canonizingElmnt := c);
-end;
 
 
-
-
-# This function needs a ladder [A_1,..,A_k] and for all indizes i<k with A_i >= A_i+1 a total order
-# on the cosets A_i\A_i+1 must be defined. 
+# A subgroup ladder [A_1,..,A_k] is strong, if A_1 acts transitively on
+# the set of all pathes of length k.
 #
-# For a given ladder [A_1,..,A_k] and elements a_1,..,a_k \in A_1 the tupel [A_1a_1,..,A_ka_k] is a 
-# strong path, if and only if there exist an element h \in A_1, so that 
-# [A_1h,..,A_kh] = [A_1a_1,..,A_ka_k].
-# The given total order allows it to define a total order on the set of strong paths of length up to k.
+# This function needs a strong ladder [A_1,..,A_k] and for all i<k
+# a total order on the cosets A_i\A_i+1 must be defined. 
+#
+# The given total order allows it to define a lexicographic ordering
+# on the set of pathes of length up to k.
 # 
-# Given the index k, a ladder [A_1,..,A_k] and an element g \in A_1 this function calculates the 
-# smallest strong path of length k, whose last component is the coset A_kg.
+# Let [A_1,...,A_k] be an strong ladder and g an element in A_1. 
+# Then this function calculates min_{a \in A_k}([A_1ag,..,A_kag]).
+# This is the smallest strong path of length k, 
+# whose last component is the coset A_kg.
 #
 StroLLSmallestPathToCoset := function( g, k, ladder )
-  local z, position, preimage, tmp, hsmall, canonical, i, h;
-  z := One(ladder.G);
+  local one, z, pos, stab, gens, gensIm, options, tmp, orbit, min, c, i;
+  one := One(ladder.G);
+  z := one;
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      position := Size(ladder.transversal[i]) + 1;
-      preimage := ladder.splitTransversal[k][i]; 
-      for h in preimage do
-        # perm := Image(ladder.hom[i],h*g);
-        # tmp := 1^perm;
-        tmp := PositionCanonical(ladder.transversal[i],h*g);
-        if position > tmp then
-          position := tmp; 
-          hsmall := h;
-        fi;
-      od;
-      canonical := ladder.transversal[i][position];
-      g := hsmall*g*canonical^-1;
-      z := canonical*z;
+      # Print("\nStep ",i,"\n");
+      # Print("g = ",g,"\n");
+      pos := PositionCanonical(ladder.transversal[i],g);
+      # Print("transversal = ",List(ladder.transversal[i]),"\n");
+      # Print("pos = ",pos,"\n");
+      # Print("transversal[",pos,"] = ",ladder.transversal[i][pos],"\n");
+      stab := ladder.cut1toJplusI[k][i-1]^g; 
+      # Print("gens = ",List(GeneratorsOfGroup(ladder.cut1toJplusI[k][i-1])),"\n");
+      gens := List(GeneratorsOfGroup(stab)); 
+      # Print("gens^g = ",gens,"\n");
+      gensIm := List(gens, x -> Image(ladder.hom[i],x));
+      options := rec();
+      options.orbsizebound := Size(ladder.transversal[i]);
+      tmp := OrbitFromGenerators(pos,gensIm,options);
+      orbit := tmp.orbit;
+      # Print("orbit = ",orbit,"\n");
+      # if i = 2 then
+      #   Print("apply orbit to ",i," ",List(orbit, x -> 1^(ladder.transversal[i][x])),"\n");
+      # else
+      #   Print("apply orbit to ",(i+1)/2);
+      #   Print(List(orbit, x -> ((i+1)/2)^(ladder.transversal[i][x])),"\n");
+      # fi;
+      min := tmp.min;
+      g := g*BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one); 
+      # Print("g = ",g,"\tafter orbit calculations\n");
+      min := ladder.representativeMap[i][min];
+      c := ladder.pathTransversal[i][min];
+      g := g*c^-1;
+      # Print("g = ",g," after transposition\n");
+      z := c*z;
+      # Print("z = ",z,"\n");
     fi; 
   od;
   return z;

@@ -272,7 +272,7 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
           ,BlockStabilizerOrbit
           ,StroLLSmallestPathToCoset
           ,StroLLLightSplitOrbit
-          ,BlockStabilizerPosition
+          ,BlockPosition
           ,BlockStabilizerReinitialize
           ];
   ProfileFunctions(fkts);

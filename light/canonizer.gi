@@ -9,7 +9,7 @@ StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   i := block.i;
   z := orbAndStab.z[i];
   perm := Image(ladder.hom[i+1],g*b*z^-1);
-  small := BlockStabilizerPosition( p, i+1, orbAndStab, ladder );
+  small := BlockPosition( p, i+1, orbAndStab, ladder );
   #small := orbAndStab.small[i+1];
   # if small <> orbAndStab.small[i+1] then
   #   Print("hier ist der Fehler");
@@ -43,7 +43,6 @@ end;
 # StroLLLightFuseOrbit only puts exactly one of them onto the stack
 StroLLLightFuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
   local g, i, b, c;
-  # p := orbAndStab.p;
   g := block.g;
   i := block.i;
   b := block.b;
@@ -98,11 +97,10 @@ StroLLLightFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
   return one;
 end;
 
-
 StroLLLightSplitCanonicalDCReps := function( i, p, orbAndStab, ladder) 
   local pos, o, min, c, homAct, z, tmp;
   BlockStabilizerReinitialize(p,i,orbAndStab,ladder);
-  pos := BlockStabilizerPosition( p, i, orbAndStab, ladder );
+  pos := BlockPosition( p, i, orbAndStab, ladder );
   o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
   min := o.min;
   if min < pos then

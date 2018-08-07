@@ -1,4 +1,25 @@
 
+# PathRepresentative := function(g,k,ladder)
+DCStoreFindCanonical := function(g,k,dcTree,ladder)
+  local node, c, position, z, i;
+  node := dcTree;
+  c := One(g);
+  for i in [ 2 .. k ] do
+    position := 1;
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      z := node.rep;
+      position := PositionCanonical(ladder.transversal[i],g*c*z^-1);
+    fi;
+    node := node.child[position];
+    if false = node.isCanonical then
+      c := c*node.canonizingElmnt; 
+      node := node.canonical;
+    fi;
+  od;
+  return rec(rep := node, canonizingElmnt := c);
+end;
+
+
 # Returns One(g) if no smaller element was found.
 # Otherwise returns a c s.t. A_{i+1}gc < A_{i+1}p
 StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladder )
@@ -9,11 +30,11 @@ StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladde
   g := block.g;
   b := block.b;
   transv := ladder.transversal[i+1];
-  small := BlockStabilizerPosition( p, i+1, orbAndStab, ladder );
+  small := BlockPosition( p, i+1, orbAndStab, ladder );
   # preimage is a transversal of E[k][i+1]\E[k][i];
   preimage := ladder.splitTransversal[k][i+1]; 
   for h in preimage do
-    pos := BlockStabilizerPosition( h*g*b, i+1, orbAndStab, ladder );
+    pos := BlockPosition( h*g*b, i+1, orbAndStab, ladder );
     # prevent double processing
     if IsBound(dc.child[pos]) then
       continue;
@@ -52,7 +73,7 @@ StroLLBreadthSplitOrbit := function( dcTree, blockQueue, p, k, orbAndStab, ladde
       gensImage := List(generators, x -> Image(ladder.hom[i+1],x));
       options := rec();
       options.orbsizebound := Size(transv);
-      tmp := BlockStabilizerOrbitFromGenerators(pos,gensImage,options);
+      tmp := OrbitFromGenerators(pos,gensImage,options);
       orbit := tmp.orbit;
       # prevent double processing
       for tmp in orbit do
@@ -74,44 +95,42 @@ end;
 # Several A_ig yield the same A_{i+1}g.
 # StroLLBreadthFuseOrbit only puts exactly one of them onto the stack
 StroLLBreadthFuseOrbit := function( dcTree, blockQueue, p, orbAndStab, ladder )
-  local block, g, i, b, dc, child, representatives, pos, o, c, x;
+  local block, stab, rep, g, i, b, dc, child, representatives, pos, o, c, x;
   block := QueuePopFront(blockQueue);
   g := block.g;
   i := block.i;
   b := block.b;
   dc := block.dc;
-  if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
-    child := rec( stabilizer := dc.stabilizer, z := dc.z );
-    dc.child := [child];
-    Unbind(dc.stabilizer);
-    block := rec( g := g, b := b, i := i+1, dc := child );
-    QueuePushBack(blockQueue,block);
-    return;
-  fi;
+  stab := block.stab;
+  # if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
+  #   child := rec( stabilizer := dc.stabilizer, z := dc.z );
+  #   dc.child := [child];
+  #   Unbind(dc.stabilizer);
+  #   block := rec( g := g, b := b, i := i+1, dc := child );
+  #   QueuePushBack(blockQueue,block);
+  #   return;
+  # fi;
   # prevent double processing:
-  if IsBound(dc.child) then
-    return;
-  else
-    child := rec( stabilizer := dc.stabilizer, rep := dc.rep );
-    dc.child := [child];
-    representatives := [];
-    pos := BlockStabilizerPosition( g*b, i+1, orbAndStab, ladder );
-    o := BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
-    for x in o.orbit do
-      c := BlockStabilizerCanonizingElmnt( i+1, o.orbit, pos, x, orbAndStab);
-      x := g*b*c*b^-1;
-      x := DCStoreFindCanonical(x,i,dcTree,ladder); 
-      Unbind(x.rep.stabilizer);
-      if IsIdenticalObj(dc,x.rep) then
-        child.stabilizer := ClosureGroup(child.stabilizer,c);
-      else
-        x.rep.canonizingElmnt := x.canonizingElmnt^-1*b*c^-1*b^-1;
-        x.rep.canonical := dc;
-      fi;
-    od;
-    block := rec( g := g, b := b, i := i+1, dc := child );
-    QueuePushBack(blockQueue,block);
-  fi;
+  # if IsBound(dc.child) then
+  #   return;
+  child := rec(child := []);
+  dc.child := [child];
+  representatives := [];
+  pos := BlockPosition( g*b, i+1, orbAndStab, ladder );
+  o := BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
+  for x in o.orbit do
+    c := BlockStabilizerCanonizingElmnt( i+1, o.orbit, pos, x, orbAndStab);
+    x := g*b*c*b^-1;
+    rep := DCStoreFindCanonical(x,i,dcTree,ladder); 
+    if IsIdenticalObj(dc,rep) then
+      child.stabilizer := ClosureGroup(child.stabilizer,c);
+    else
+      x.rep.canonizingElmnt := x.canonizingElmnt^-1*b*c^-1*b^-1;
+      x.rep.canonical := dc;
+    fi;
+  od;
+  block := rec( g := g, b := b, i := i+1, dc := child );
+  QueuePushBack(blockQueue,block);
 end;
 
 
@@ -146,8 +165,7 @@ StroLLBreadthFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
         if not canonizer = one then
           return canonizer; 
         fi;
-      else
-        StroLLBreadthFuseOrbit(dcTree,blockQueue,p,orbAndStab,ladder);
+      else StroLLBreadthFuseOrbit(dcTree,blockQueue,p,orbAndStab,ladder);
       fi;
     fi;
   od;
@@ -159,7 +177,7 @@ end;
 StroLLBreadthSplitCanonicalDCReps := function( i, p, orbAndStab, ladder) 
   local pos, o, min, c, homAct, z, tmp;
   BlockStabilizerReinitialize(p,i,orbAndStab,ladder);
-  pos := BlockStabilizerPosition( p, i, orbAndStab, ladder );
+  pos := BlockPosition( p, i, orbAndStab, ladder );
   o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
   min := o.min;
   if min < pos then

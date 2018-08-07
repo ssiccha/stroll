@@ -52,7 +52,7 @@
 #     If A_{i-1} <= A_i then rightcosets[i] stores the rightcosets 
 #     of A_{i-1} in A_i 
 StroLLBuildTransversal := function(subgroup)
-  local one, ladder, U, V, tmp, i, j;
+  local one, ladder, U, V, tmp, i, j, intersection, pos;
   one := One(subgroup[1]);
   ladder := rec();
   ladder.G := subgroup[1];
@@ -64,25 +64,39 @@ StroLLBuildTransversal := function(subgroup)
   ladder.rightcosets := [];
   ladder.rightcosets[1] := RightCosets(ladder.G,ladder.G);
   ladder.hom := [];
+  ladder.pathTransversal := [];
+  ladder.representativeMap := [];
+  intersection := [subgroup[1]];
   for i in [2 .. Size(subgroup)] do
+    intersection[i] := Intersection(intersection[i-1],subgroup[i]);
     ladder.chain[i] := subgroup[i];
     if true = IsSubgroup(subgroup[i],subgroup[i-1]) then
       # group[i-1] is a subgroup of group[i]
       U := subgroup[i];
       V := subgroup[i-1];
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/IndexNC(U,V);
+      ladder.transversal[i] := RightTransversal(U,V);
     elif true = IsSubgroup(subgroup[i-1],subgroup[i]) then
       # group[i] is a subgroup of group[i-1];
+      U := intersection[i-1];
+      V := intersection[i];
+      ladder.pathTransversal[i] := RightTransversal(U,V);   
       U := subgroup[i-1];
       V := subgroup[i];
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*IndexNC(U,V);
+      ladder.transversal[i] := RightTransversal(U,V);
+      ladder.representativeMap[i] := [];
+      for j in [1..Size(ladder.pathTransversal[i])] do
+        tmp := ladder.pathTransversal[i][j];
+        pos := PositionCanonical(ladder.transversal[i],tmp); 
+        ladder.representativeMap[i][pos] := j;
+      od;
     else
       Error("Entry ",i," in the grouplist is neither a subgroup of the group on position ",i-1,", nor the other way round\n"); 
       return;
     fi;
     ladder.rightcosets[i] := RightCosets(U,V);
     ladder.hom[i] := FactorCosetAction(U,V);
-    ladder.transversal[i] := RightTransversal(U,V);
     if not 1 = PositionCanonical(ladder.transversal[i],one) then
       Error("Assumption on the transversal is not fulfilled");
     fi;
