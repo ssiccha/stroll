@@ -18,12 +18,11 @@ end;
 
 
 BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local U, permlist, i;
+  local z, pos, canon, g, U, permlist, i;
   # initialize data storage
   if not IsBound(orbAndStab.p) then
     orbAndStab.p := [];
-    orbAndStab.z := [PathRepresentative( p, 1, ladder )];
-    orbAndStab.z[1] := PathRepresentative( p, 1, ladder );
+    orbAndStab.z := [One(p)];
     orbAndStab.orbits := [];
     orbAndStab.min := [];
     orbAndStab.gensOfStab := [];
@@ -31,18 +30,19 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     orbAndStab.homImageGensOfStab := [];
   fi;
     
+  g := p;
+  z := One(p); 
   for i in [ 2 .. n ] do
-    # if p has changed, delete old data storage
-    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      g := p*z^-1;
+      pos := PositionCanonical(ladder.pathTransversal[i],g);
+      canon := ladder.pathTransversal[i][pos];
+      g := g*canon^-1;
+      z := canon*z;
+      orbAndStab.z[i] := z;
+      # if p has changed, delete old data storage
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
         orbAndStab.p[i] := p;
-        #z := orbAndStab.z[i-1];
-        #tmp := p*z^-1;
-        #pos := PositionCanonical(ladder.pathTransversal[i],tmp);
-        #pos := PositionCanonical(ladder.transversal[i],tmp);
-        #orbAndStab.z[i] := ladder.pathTransversal[i][pos]*z;
-        # orbAndStab.small[i] := pos;
-        orbAndStab.z[i] := PathRepresentative( p, i, ladder ); 
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
         U := ConjugateGroup( orbAndStab.C[i-1], orbAndStab.z[i-1]^-1 );
@@ -51,13 +51,9 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.homImageGensOfStab[i] := permlist; 
       fi;
     else
-      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
-        orbAndStab.p[i] := p;
-        orbAndStab.z[i] := PathRepresentative( p, i, ladder ); 
-        # z := orbAndStab.z[i-1];
-        # tmp := p*z^-1;
-        # pos := PositionCanonical(ladder.transversal[i],tmp);
-        # orbAndStab.z[i] := ladder.transversal[i][pos]*z;
+      orbAndStab.z[i] := z;
+      # if p has changed, delete old data storage
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
         U := ConjugateGroup( orbAndStab.C[i], orbAndStab.z[i]^-1 );
