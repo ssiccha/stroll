@@ -173,6 +173,7 @@ StroLLBuildLadder := function(groups)
   ladder := StroLLBuildTransversal(groups);
   # BuildStroLLTransversalCompare(ladder);
   StroLLBuildSubladder(ladder);
+  ladder.one := One(groups[1]);
   return ladder;
 end;
 

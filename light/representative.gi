@@ -188,42 +188,43 @@ end;
 # whose last component is the coset A_kg.
 #
 StroLLSmallestPathToCoset := function( g, k, ladder )
-  local one, z, pos, stab, gens, gensIm, options, tmp, orbit, min, c, i;
-  one := One(ladder.G);
-  z := one;
+  local one, z, options, pos, stab, gens, gensIm, tmp, orbit, min, perm, c, i;
+  one := ladder.one;
+  if not IsBound(ladder.SmallestPathToCoset) then
+    ladder.SmallestPathToCoset := [];
+  fi;
+  if not IsBound(ladder.SmallestPathToCoset[k]) then
+    ladder.SmallestPathToCoset[k] := rec(orbList := [],posList := []);
+  fi;
+  z := ladder.one;
+  options := rec();
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      # Print("\nStep ",i,"\n");
-      # Print("g = ",g,"\n");
-      pos := PositionCanonical(ladder.transversal[i],g);
-      # Print("transversal = ",List(ladder.transversal[i]),"\n");
-      # Print("pos = ",pos,"\n");
-      # Print("transversal[",pos,"] = ",ladder.transversal[i][pos],"\n");
-      stab := ladder.cut1toJplusI[k][i-1]^g; 
-      # Print("gens = ",List(GeneratorsOfGroup(ladder.cut1toJplusI[k][i-1])),"\n");
+      stab := ladder.cut1toJplusI[k][i-1]; 
       gens := List(GeneratorsOfGroup(stab)); 
-      # Print("gens^g = ",gens,"\n");
-      gensIm := List(gens, x -> Image(ladder.hom[i],x));
-      options := rec();
-      options.orbsizebound := Size(ladder.transversal[i]);
-      tmp := OrbitFromGenerators(pos,gensIm,options);
-      orbit := tmp.orbit;
-      # Print("orbit = ",orbit,"\n");
-      # if i = 2 then
-      #   Print("apply orbit to ",i," ",List(orbit, x -> 1^(ladder.transversal[i][x])),"\n");
-      # else
-      #   Print("apply orbit to ",(i+1)/2);
-      #   Print(List(orbit, x -> ((i+1)/2)^(ladder.transversal[i][x])),"\n");
-      # fi;
-      min := tmp.min;
-      g := g*BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one); 
-      # Print("g = ",g,"\tafter orbit calculations\n");
+      if not IsBound(ladder.SmallestPathToCoset[k].orbList[i]) then
+        pos := PositionCanonical(ladder.transversal[i],one);
+        gensIm := List(gens, x -> Image(ladder.hom[i],x));
+        options.orbsizebound := Size(ladder.transversal[i]);
+        tmp := OrbitFromGenerators(pos,gensIm,options);
+        ladder.SmallestPathToCoset[k].posList[i] := pos;
+        ladder.SmallestPathToCoset[k].orbList[i] := tmp.orbit;
+      fi;
+      pos := ladder.SmallestPathToCoset[k].posList[i];
+      orbit := ladder.SmallestPathToCoset[k].orbList[i];
+      perm := Image(ladder.hom[i],g);
+      min := pos;
+      for tmp in orbit do
+        if tmp^perm < min^perm then
+          min := tmp; 
+        fi; 
+      od;
+      g := BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one)*g; 
+      min := min^perm;
       min := ladder.representativeMap[i][min];
       c := ladder.pathTransversal[i][min];
       g := g*c^-1;
-      # Print("g = ",g," after transposition\n");
       z := c*z;
-      # Print("z = ",z,"\n");
     fi; 
   od;
   return z;
