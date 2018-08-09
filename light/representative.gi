@@ -188,39 +188,42 @@ end;
 # whose last component is the coset A_kg.
 #
 StroLLSmallestPathToCoset := function( g, k, ladder )
-  local one, z, options, pos, stab, gens, gensIm, tmp, orbit, min, perm, c, i;
+  local one, z, options, pos, stab, gens, gensIm, tmp, orbit, min, perm, c, i, j;
   one := ladder.one;
   if not IsBound(ladder.SmallestPathToCoset) then
     ladder.SmallestPathToCoset := [];
   fi;
   if not IsBound(ladder.SmallestPathToCoset[k]) then
-    ladder.SmallestPathToCoset[k] := rec(orbList := [],posList := []);
+    ladder.SmallestPathToCoset[k] := rec();
+    ladder.SmallestPathToCoset[k].orbList := [];
+    ladder.SmallestPathToCoset[k].posList := [];
+    ladder.SmallestPathToCoset[k].canon := [];
   fi;
   z := ladder.one;
   options := rec();
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      stab := ladder.cut1toJplusI[k][i-1]; 
-      gens := List(GeneratorsOfGroup(stab)); 
       if not IsBound(ladder.SmallestPathToCoset[k].orbList[i]) then
+        stab := ladder.cut1toJplusI[k][i-1]; 
+        gens := List(GeneratorsOfGroup(stab)); 
         pos := PositionCanonical(ladder.transversal[i],one);
         gensIm := List(gens, x -> Image(ladder.hom[i],x));
         options.orbsizebound := Size(ladder.transversal[i]);
-        tmp := OrbitFromGenerators(pos,gensIm,options);
+        orbit := OrbitFromGenerators(pos,gensIm,options).orbit;
+        ladder.SmallestPathToCoset[k].orbList[i] := orbit;
         ladder.SmallestPathToCoset[k].posList[i] := pos;
-        ladder.SmallestPathToCoset[k].orbList[i] := tmp.orbit;
+        ladder.SmallestPathToCoset[k].canon[i] := [];
+        for j in [1..Size(orbit)] do
+          min := orbit[j];
+          c := BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one);
+          ladder.SmallestPathToCoset[k].canon[i][min] := c;
+        od;
       fi;
-      pos := ladder.SmallestPathToCoset[k].posList[i];
-      orbit := ladder.SmallestPathToCoset[k].orbList[i];
       perm := Image(ladder.hom[i],g);
-      min := pos;
-      for tmp in orbit do
-        if tmp^perm < min^perm then
-          min := tmp; 
-        fi; 
-      od;
-      g := BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one)*g; 
-      min := min^perm;
+      orbit := ladder.SmallestPathToCoset[k].orbList[i];
+      min := Minimum(List(orbit,x -> x^perm));
+      pos := min^(perm^-1);
+      g := ladder.SmallestPathToCoset[k].canon[i][pos]*g; 
       min := ladder.representativeMap[i][min];
       c := ladder.pathTransversal[i][min];
       g := g*c^-1;
