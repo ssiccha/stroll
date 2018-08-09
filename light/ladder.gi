@@ -18,6 +18,95 @@
 
 
 
+StrongLadderInit := function(groups,ladder)
+  ladder.one := One(groups[1]);
+  ladder.subgroupIndex := [1];
+  ladder.hom := [];
+  ladder.pathTransversal := [];
+  return ladder;
+end;
+
+
+
+StroLLCheckSubgroupChain := function(ladder,subgroup,i)
+  if not IsBound(subgroup[i]) then
+    Error("Entry ",i," in ladder is not bound.");
+  fi;
+  if not IsGroup(subgroup[i]) then
+    Error("Entry ",i," in ladder isn't a group.");
+  fi;
+  if i = 1 then
+    ladder.G := subgroup[1];
+    ladder.chain := [subgroup[1]];
+    ladder.isSplitStep := [false];
+    ladder.isFuseStep := [false];
+  else
+    if not IsSubset(ladder.chain[1],subgroup[i-1]) then
+      Error("Entry ",i," in the ladder is not a subgroup of the first group");
+    fi;
+    if IsSubset(subgroup[i],subgroup[i-1]) then
+      ladder.chain[i] := AsSubgroup(ladder.chain[1],subgroup[i]);
+      ladder.isSplitStep[i] := false;
+      ladder.isFuseStep[i] := true;
+    elif IsSubset(subgroup[i-1],subgroup[i]) then
+      ladder.chain[i] := AsSubgroup(ladder.chain[1],subgroup[i]);
+      ladder.isSplitStep[i] := true;
+      ladder.isFuseStep[i] := false;
+    else
+      Error("Entry ",i," in the grouplist is neither a subgroup of the group on position ",i-1,", nor the other way round\n"); 
+    fi;
+  fi;
+end;
+
+
+
+StroLLBuildIntersectionChain := function(ladder,i)
+  local intersection, U, V;
+  if i = 1 then
+    ladder.intersectionChain := [ladder.chain[1]];
+  else
+    intersection := ladder.intersectionChain;
+    if ladder.isFuseStep[i] then
+      # group[i-1] is a subgroup of group[i]
+      intersection[i] := intersection[i-1];
+      U := intersection[i];
+      V := intersection[i-1];
+    else
+      # group[i] is a subgroup of group[i-1];
+      intersection[i] := Intersection(intersection[i-1],ladder.chain[i]);
+      U := intersection[i-1];
+      V := intersection[i];
+    fi;
+    ladder.pathTransversal[i] := RightTransversal(U,V);   
+  fi;
+end;
+
+
+StroLLIntersectionMatrix := function(ladder,i)
+  local chain, tmp, j;
+  chain := ladder.chain;
+  if i = 1 then
+    ladder.intersection := [[chain[1]]];
+  else
+    ladder.intersection[i] := [];
+    ladder.intersection[i][i] := chain[i];
+    ladder.intersection[1][i] := chain[i];
+    ladder.intersection[i][1] := chain[i];
+    for j in [2 .. i-1] do
+      if true = IsSubgroup(chain[i],chain[i-1]) then
+        # group[i-1] is a subgroup of group[i]
+        ladder.intersection[i][j] := Intersection(chain[j],chain[i]);
+        ladder.intersection[j][i] := ladder.intersection[i][j];
+      elif true = IsSubgroup(chain[i-1],chain[i]) then
+        # group[i] is a subgroup of group[i-1];
+        tmp := ladder.intersection[i-1][j];
+        ladder.intersection[i][j] := Intersection(tmp,chain[i]);
+        ladder.intersection[j][i] := ladder.intersection[i][j];
+      fi;
+    od;
+  fi;
+end;
+
 
 # Given a strong subgroupladder (U_1,...,U_n) a record of several 
 # structures related to this subgroupladder is returned. 
@@ -51,38 +140,25 @@
 #     of A_i in A_{i-1} 
 #     If A_{i-1} <= A_i then rightcosets[i] stores the rightcosets 
 #     of A_{i-1} in A_i 
-StroLLBuildTransversal := function(subgroup)
-  local one, ladder, U, V, tmp, i, j, intersection, pos;
-  one := One(subgroup[1]);
-  ladder := rec();
-  ladder.G := subgroup[1];
-  ladder.chain := []; 
-  ladder.chain[1] := subgroup[1]; 
-  ladder.subgroupIndex := [1];
-  ladder.transversal := [];
-  ladder.transversal[1] := RightTransversal(ladder.G,ladder.G);
-  ladder.rightcosets := [];
-  ladder.rightcosets[1] := RightCosets(ladder.G,ladder.G);
-  ladder.hom := [];
-  ladder.pathTransversal := [];
-  ladder.representativeMap := [];
-  intersection := [subgroup[1]];
-  for i in [2 .. Size(subgroup)] do
-    intersection[i] := Intersection(intersection[i-1],subgroup[i]);
-    ladder.chain[i] := subgroup[i];
-    if true = IsSubgroup(subgroup[i],subgroup[i-1]) then
+StroLLBuildTransversal := function(ladder,i)
+  local U, V, tmp, pos, j;
+  if i = 1 then
+    ladder.transversal := [];
+    ladder.transversal[1] := RightTransversal(ladder.G,ladder.G);
+    ladder.rightcosets := [];
+    ladder.rightcosets[1] := RightCosets(ladder.G,ladder.G);
+    ladder.representativeMap := [];
+  else
+    if ladder.isFuseStep[i] then
       # group[i-1] is a subgroup of group[i]
-      U := subgroup[i];
-      V := subgroup[i-1];
+      U := ladder.chain[i];
+      V := ladder.chain[i-1];
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/IndexNC(U,V);
       ladder.transversal[i] := RightTransversal(U,V);
-    elif true = IsSubgroup(subgroup[i-1],subgroup[i]) then
+    else
       # group[i] is a subgroup of group[i-1];
-      U := intersection[i-1];
-      V := intersection[i];
-      ladder.pathTransversal[i] := RightTransversal(U,V);   
-      U := subgroup[i-1];
-      V := subgroup[i];
+      U := ladder.chain[i-1];
+      V := ladder.chain[i];
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*IndexNC(U,V);
       ladder.transversal[i] := RightTransversal(U,V);
       ladder.representativeMap[i] := [];
@@ -91,41 +167,14 @@ StroLLBuildTransversal := function(subgroup)
         pos := PositionCanonical(ladder.transversal[i],tmp); 
         ladder.representativeMap[i][pos] := j;
       od;
-    else
-      Error("Entry ",i," in the grouplist is neither a subgroup of the group on position ",i-1,", nor the other way round\n"); 
-      return;
     fi;
     ladder.rightcosets[i] := RightCosets(U,V);
     ladder.hom[i] := FactorCosetAction(U,V);
-    if not 1 = PositionCanonical(ladder.transversal[i],one) then
+    if not 1 = PositionCanonical(ladder.transversal[i],ladder.one) then
       Error("Assumption on the transversal is not fulfilled");
     fi;
-  od;
-  ladder.intersection := [[subgroup[1]]];
-  for i in [2 .. Size(subgroup)] do
-    ladder.intersection[i] := [];
-  od;
-  for i in [2 .. Size(subgroup)] do
-    ladder.intersection[i][i] := subgroup[i];
-    ladder.intersection[1][i] := subgroup[i];
-    ladder.intersection[i][1] := subgroup[i];
-    for j in [2 .. i-1] do
-      if true = IsSubgroup(subgroup[i],subgroup[i-1]) then
-        # group[i-1] is a subgroup of group[i]
-        ladder.intersection[i][j] := Intersection(subgroup[j],subgroup[i]);
-        ladder.intersection[j][i] := ladder.intersection[i][j];
-      elif true = IsSubgroup(subgroup[i-1],subgroup[i]) then
-        # group[i] is a subgroup of group[i-1];
-        tmp := ladder.intersection[i-1][j];
-        ladder.intersection[i][j] := Intersection(tmp,subgroup[i]);
-        ladder.intersection[j][i] := ladder.intersection[i][j];
-      fi;
-    od;
-  od;
-  return ladder;
+  fi;
 end;
-
-
 
 
 StroLLBuildSubladder := function(ladder)
@@ -169,11 +218,18 @@ end;
 
 
 StroLLBuildLadder := function(groups)
-  local ladder;
-  ladder := StroLLBuildTransversal(groups);
+  local n, ladder;
+  n := Size(groups);
+  ladder := rec();
+  StrongLadderInit(groups,ladder);
+  for i in [ 1 .. n ] do
+    StroLLCheckSubgroupChain(ladder,groups,i);
+    StroLLIntersectionMatrix(ladder,i);
+    StroLLBuildIntersectionChain(ladder,i);
+    StroLLBuildTransversal(ladder,i);
+  od;
   # BuildStroLLTransversalCompare(ladder);
   StroLLBuildSubladder(ladder);
-  ladder.one := One(groups[1]);
   ladder.SmallestPathToCoset := [];
   return ladder;
 end;
