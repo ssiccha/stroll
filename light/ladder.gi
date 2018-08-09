@@ -174,6 +174,7 @@ StroLLBuildLadder := function(groups)
   # BuildStroLLTransversalCompare(ladder);
   StroLLBuildSubladder(ladder);
   ladder.one := One(groups[1]);
+  ladder.SmallestPathToCoset := [];
   return ladder;
 end;
 

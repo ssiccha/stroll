@@ -18,7 +18,7 @@ end;
 
 
 BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local z, pos, canon, U, permlist, i;
+  local z, pos, canon, gens, permlist, i;
   # initialize data storage
   if not IsBound(orbAndStab.p) then
     orbAndStab.p := [];
@@ -34,26 +34,28 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
       # if p has changed, delete old data storage
       if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        orbAndStab.p[i] := p;
         z := orbAndStab.z[i-1];
         pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
         canon := ladder.pathTransversal[i][pos];
         orbAndStab.z[i] := canon*z;
-        orbAndStab.p[i] := p;
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
-        U := ConjugateGroup( orbAndStab.C[i-1], orbAndStab.z[i-1]^-1 );
-        orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        gens := List(GeneratorsOfGroup(orbAndStab.C[i-1])); 
+        orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
         orbAndStab.homImageGensOfStab[i] := permlist; 
       fi;
     else
       # if p has changed, delete old data storage
-      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i-1] then
-        orbAndStab.z[i] := orbAndStab.z[i-1];
+      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        orbAndStab.p[i] := p;
+        z := orbAndStab.z[i-1];
+        orbAndStab.z[i] := z;
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
-        U := ConjugateGroup( orbAndStab.C[i], orbAndStab.z[i]^-1 );
-        orbAndStab.gensOfStab[i] := List(GeneratorsOfGroup(U)); 
+        gens := List(GeneratorsOfGroup(orbAndStab.C[i])); 
+        orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
         orbAndStab.homImageGensOfStab[i] := permlist; 
       fi;
@@ -172,6 +174,40 @@ end;
 
 
 
+StroLLSmallestPathHelper := function( k, ladder )
+  local one, stab, gens, pos, gensIm, options, orbit, min, c, i, j;
+  one := ladder.one;
+  if not IsBound(ladder.SmallestPathToCoset[k]) then
+    ladder.SmallestPathToCoset[k] := rec();
+    ladder.SmallestPathToCoset[k].orbList := [];
+    ladder.SmallestPathToCoset[k].posList := [];
+    ladder.SmallestPathToCoset[k].canon := [];
+  fi;
+  for i in [ 2 .. k ] do
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      if not IsBound(ladder.SmallestPathToCoset[k].orbList[i]) then
+        stab := ladder.cut1toJplusI[k][i-1]; 
+        gens := List(GeneratorsOfGroup(stab)); 
+        pos := PositionCanonical(ladder.transversal[i],one);
+        gensIm := List(gens, x -> Image(ladder.hom[i],x));
+        options := rec();
+        options.orbsizebound := Size(ladder.transversal[i]);
+        orbit := OrbitFromGenerators(pos,gensIm,options).orbit;
+        ladder.SmallestPathToCoset[k].orbList[i] := orbit;
+        ladder.SmallestPathToCoset[k].posList[i] := pos;
+        ladder.SmallestPathToCoset[k].canon[i] := [];
+        for j in [1..Size(orbit)] do
+          min := orbit[j];
+          c := BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one);
+          ladder.SmallestPathToCoset[k].canon[i][min] := c;
+        od;
+      fi;
+    fi; 
+  od;
+end; 
+
+
+
 
 # A subgroup ladder [A_1,..,A_k] is strong, if A_1 acts transitively on
 # the set of all pathes of length k.
@@ -188,37 +224,13 @@ end;
 # whose last component is the coset A_kg.
 #
 StroLLSmallestPathToCoset := function( g, k, ladder )
-  local one, z, options, pos, stab, gens, gensIm, tmp, orbit, min, perm, c, i, j;
-  one := ladder.one;
-  if not IsBound(ladder.SmallestPathToCoset) then
-    ladder.SmallestPathToCoset := [];
-  fi;
+  local z, perm, orbit, min, pos, c, i;
   if not IsBound(ladder.SmallestPathToCoset[k]) then
-    ladder.SmallestPathToCoset[k] := rec();
-    ladder.SmallestPathToCoset[k].orbList := [];
-    ladder.SmallestPathToCoset[k].posList := [];
-    ladder.SmallestPathToCoset[k].canon := [];
+    StroLLSmallestPathHelper(k,ladder);
   fi;
   z := ladder.one;
-  options := rec();
   for i in [ 2 .. k ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      if not IsBound(ladder.SmallestPathToCoset[k].orbList[i]) then
-        stab := ladder.cut1toJplusI[k][i-1]; 
-        gens := List(GeneratorsOfGroup(stab)); 
-        pos := PositionCanonical(ladder.transversal[i],one);
-        gensIm := List(gens, x -> Image(ladder.hom[i],x));
-        options.orbsizebound := Size(ladder.transversal[i]);
-        orbit := OrbitFromGenerators(pos,gensIm,options).orbit;
-        ladder.SmallestPathToCoset[k].orbList[i] := orbit;
-        ladder.SmallestPathToCoset[k].posList[i] := pos;
-        ladder.SmallestPathToCoset[k].canon[i] := [];
-        for j in [1..Size(orbit)] do
-          min := orbit[j];
-          c := BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,one);
-          ladder.SmallestPathToCoset[k].canon[i][min] := c;
-        od;
-      fi;
       perm := Image(ladder.hom[i],g);
       orbit := ladder.SmallestPathToCoset[k].orbList[i];
       min := Minimum(List(orbit,x -> x^perm));

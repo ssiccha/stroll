@@ -275,6 +275,7 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
           ,BlockPosition
           ,BlockStabilizerReinitialize
           ,PositionCanonical
+          ,StroLLSmallestPathHelper
           ];
   ProfileFunctions(fkts);
   LeiterspielLightGraphGeneration(n,k);
