@@ -24,12 +24,12 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     orbAndStab.p := [];
     orbAndStab.z := [One(p)];
     orbAndStab.orbits := [];
-    orbAndStab.min := [];
     orbAndStab.gensOfStab := [];
     orbAndStab.small := [];
     orbAndStab.homImageGensOfStab := [];
     orbAndStab.small := [1];
     orbAndStab.orbitMap := [[1]];
+    orbAndStab.canon := [];
   fi;
     
   for i in [ 2 .. n ] do
@@ -43,8 +43,8 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         canon := ladder.pathTransversal[i][pos];
         orbAndStab.z[i] := canon*z;
         orbAndStab.orbits[i] := [];
-        orbAndStab.min[i] := [];
         orbAndStab.orbitMap[i] := [];
+        orbAndStab.canon[i] := [];
         gens := List(GeneratorsOfGroup(orbAndStab.C[i-1])); 
         orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
@@ -59,8 +59,8 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
         orbAndStab.z[i] := z;
         orbAndStab.orbits[i] := [];
-        orbAndStab.min[i] := [];
         orbAndStab.orbitMap[i] := [];
+        orbAndStab.canon[i] := [];
         gens := List(GeneratorsOfGroup(orbAndStab.C[i])); 
         orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
@@ -112,17 +112,6 @@ BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
     return ladder.one; 
   fi;
 
-  ## check, if pos is in one of the known orbits
-  #isInOrbit := false;
-  #for j in [ 1 .. Size(orbAndStab.orbits[i]) ] do
-  #  orbit := orbAndStab.orbits[i][j];
-  #  if pos in orbit then
-  #    isInOrbit := true;
-  #    min := orbAndStab.min[i][j];
-  #    break;
-  #  fi;
-  #od;   
-
   if IsBound(orbAndStab.orbitMap[i][pos]) then
     min := orbAndStab.orbitMap[i][pos]; 
     orbit := orbAndStab.orbits[i][min];
@@ -132,12 +121,11 @@ BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
     options := rec();
     options.orbsizebound := Size(ladder.transversal[i]);
     tmp := OrbitFromGenerators(pos,gensImage,options);
-    min := tmp.min;
-    orbit := tmp.orbit;
-    orbAndStab.orbits[i][min] := orbit;
+    orbAndStab.orbits[i][tmp.min] := tmp.orbit;
     for j in tmp.orbit do
-      orbAndStab.orbitMap[i][j] := min; 
+      orbAndStab.orbitMap[i][j] := tmp.min; 
     od;
+    return tmp;
     #Perform(orbit,function(x) orbAndStab.orbitMap[i][x]:=min; end);
   fi;
 
@@ -172,12 +160,16 @@ end;
 
 
 BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
-  local z, generators;
+  local z, gens, c;
+  if IsBound(orbAndStab.canon[i][pos]) then
+    return orbAndStab.canon[i][pos]; 
+  fi;
   z := orbAndStab.z[i-1];
-  generators := orbAndStab.gensOfStab[i]; 
-  return BlockStabilizerCanElmntFromGenerators(orbit,pos,min,generators,z);
+  gens := orbAndStab.gensOfStab[i]; 
+  c := BlockStabilizerCanElmntFromGenerators(orbit,pos,min,gens,z);
+  orbAndStab.canon[i][pos] := c;
+  return c;
 end;
-
 
 
 StroLLSmallestPathHelper := function( k, ladder )
