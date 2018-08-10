@@ -178,24 +178,24 @@ end;
 #     If A_{i-1} <= A_i then rightcosets[i] stores the rightcosets 
 #     of A_{i-1} in A_i 
 StroLLBuildTransversal := function(ladder,i)
-  local U, V, tmp, pos, j;
+  local chain, U, V, tmp, pos, j;
+  chain := ladder.chain;
   if i = 1 then
-    ladder.transversal := [];
-    ladder.transversal[1] := RightTransversal(ladder.G,ladder.G);
-    ladder.rightcosets := [];
-    ladder.rightcosets[1] := RightCosets(ladder.G,ladder.G);
+    ladder.transversal := [RightTransversal(ladder.G,ladder.G)];
+    ladder.rightcosets := [RightCosets(ladder.G,ladder.G)];
     ladder.representativeMap := [];
+    ladder.transvOnePos := [1];
   else
     if ladder.isFuseStep[i] then
       # group[i-1] is a subgroup of group[i]
-      U := ladder.chain[i];
-      V := ladder.chain[i-1];
+      U := chain[i];
+      V := chain[i-1];
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]/IndexNC(U,V);
       ladder.transversal[i] := RightTransversal(U,V);
     else
       # group[i] is a subgroup of group[i-1];
-      U := ladder.chain[i-1];
-      V := ladder.chain[i];
+      U := chain[i-1];
+      V := chain[i];
       ladder.subgroupIndex[i] := ladder.subgroupIndex[i-1]*IndexNC(U,V);
       ladder.transversal[i] := RightTransversal(U,V);
       ladder.representativeMap[i] := [];
@@ -207,9 +207,7 @@ StroLLBuildTransversal := function(ladder,i)
     fi;
     ladder.rightcosets[i] := RightCosets(U,V);
     ladder.hom[i] := FactorCosetAction(U,V);
-    if not 1 = PositionCanonical(ladder.transversal[i],ladder.one) then
-      Error("Assumption on the transversal is not fulfilled");
-    fi;
+    ladder.transvOnePos[i] := PositionCanonical(ladder.transversal[i],ladder.one);
   fi;
 end;
 
@@ -256,7 +254,7 @@ end;
 
 
 StroLLBuildLadder := function(groups)
-  local n, ladder;
+  local n, ladder, i;
   n := Size(groups);
   ladder := rec();
   StrongLadderInit(groups,ladder);

@@ -29,6 +29,7 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     orbAndStab.small := [];
     orbAndStab.homImageGensOfStab := [];
     orbAndStab.small := [1];
+    orbAndStab.orbitMap := [[1]];
   fi;
     
   for i in [ 2 .. n ] do
@@ -38,11 +39,12 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.p[i] := p;
         z := orbAndStab.z[i-1];
         pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
-        orbAndStab.small[i] := pos;
+        orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
         canon := ladder.pathTransversal[i][pos];
         orbAndStab.z[i] := canon*z;
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
+        orbAndStab.orbitMap[i] := [];
         gens := List(GeneratorsOfGroup(orbAndStab.C[i-1])); 
         orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
@@ -54,10 +56,11 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.p[i] := p;
         z := orbAndStab.z[i-1];
         pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
-        orbAndStab.small[i] := pos;
+        orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
         orbAndStab.z[i] := z;
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
+        orbAndStab.orbitMap[i] := [];
         gens := List(GeneratorsOfGroup(orbAndStab.C[i])); 
         orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
@@ -69,14 +72,7 @@ end;
 
 
 BlockPosition := function(g,i,orbAndStab,ladder)
-  local z, pos;
-  if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-    z := orbAndStab.z[i-1];
-  else
-    z := orbAndStab.z[i];
-  fi;
-  pos := PositionCanonical(ladder.transversal[i],g*z^-1);
-  return pos;
+  return PositionCanonical(ladder.transversal[i],g*(orbAndStab.z[i-1])^-1);
 end;
 
 
@@ -113,30 +109,36 @@ end;
 BlockStabilizerOrbit := function( pos, i, orbAndStab, ladder )
   local isInOrbit, orbit, min, gensImage, options, tmp, orbitInfo, j;
   if i = 1 then
-    return One(ladder.chain[1]); 
+    return ladder.one; 
   fi;
 
-  # check, if pos is in one of the known orbits
-  isInOrbit := false;
-  for j in [ 1 .. Size(orbAndStab.orbits[i]) ] do
-    orbit := orbAndStab.orbits[i][j];
-    if pos in orbit then
-      isInOrbit := true;
-      min := orbAndStab.min[i][j];
-      break;
-    fi;
-  od;   
+  ## check, if pos is in one of the known orbits
+  #isInOrbit := false;
+  #for j in [ 1 .. Size(orbAndStab.orbits[i]) ] do
+  #  orbit := orbAndStab.orbits[i][j];
+  #  if pos in orbit then
+  #    isInOrbit := true;
+  #    min := orbAndStab.min[i][j];
+  #    break;
+  #  fi;
+  #od;   
 
-  if not isInOrbit then
+  if IsBound(orbAndStab.orbitMap[i][pos]) then
+    min := orbAndStab.orbitMap[i][pos]; 
+    orbit := orbAndStab.orbits[i][min];
+  else
     # build up new orbit
     gensImage := orbAndStab.homImageGensOfStab[i]; 
     options := rec();
     options.orbsizebound := Size(ladder.transversal[i]);
     tmp := OrbitFromGenerators(pos,gensImage,options);
-    orbit := tmp.orbit;
     min := tmp.min;
-    Add(orbAndStab.orbits[i],orbit);
-    Add(orbAndStab.min[i],min);
+    orbit := tmp.orbit;
+    orbAndStab.orbits[i][min] := orbit;
+    for j in tmp.orbit do
+      orbAndStab.orbitMap[i][j] := min; 
+    od;
+    #Perform(orbit,function(x) orbAndStab.orbitMap[i][x]:=min; end);
   fi;
 
   orbitInfo := rec(min := min, orbit := orbit);
@@ -247,5 +249,29 @@ StroLLSmallestPathToCoset := function( g, k, ladder )
     fi; 
   od;
   return z;
+end; 
+
+IsSmallestPathToCoset := function( g, k, ladder )
+  local z, perm, orbit, min, pos, c, i;
+  if not IsBound(ladder.SmallestPathToCoset[k]) then
+    StroLLSmallestPathHelper(k,ladder);
+  fi;
+  z := ladder.one;
+  for i in [ 2 .. k ] do
+    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+      perm := Image(ladder.hom[i],g);
+      orbit := ladder.SmallestPathToCoset[k].orbList[i];
+      min := Minimum(List(orbit,x -> x^perm));
+      pos := ladder.transvOnePos[i]^perm;
+      if pos <> min then
+        return false; 
+      fi;
+      min := ladder.representativeMap[i][min];
+      c := ladder.pathTransversal[i][min];
+      g := g*c^-1;
+      z := c*z;
+    fi; 
+  od;
+  return true;
 end; 
 

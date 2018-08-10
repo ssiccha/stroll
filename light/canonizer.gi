@@ -9,12 +9,7 @@ StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   i := block.i;
   z := orbAndStab.z[i];
   perm := Image(ladder.hom[i+1],g*b*z^-1);
-  small := BlockPosition( p, i+1, orbAndStab, ladder );
-  #small := orbAndStab.small[i+1];
-  # if small <> orbAndStab.small[i+1] then
-  #   Print("hier ist der Fehler");
-  #   return 2;
-  # fi;
+  small := orbAndStab.small[i+1];
   preimage := ladder.preimage[k][i+1];
   for l in [ 1 .. Size(preimage)] do
     pos := preimage[l]^perm;
