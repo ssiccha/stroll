@@ -70,51 +70,55 @@ end;
 # It also calculates the stabilizer of A_kp in B.
 StroLLLightFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
   local one, block, i, blockStack, b, isSplitStep, canonizer;
-  BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
-  one := One(p);
   orbAndStab.C[k] := orbAndStab.C[k-1];
-  block := rec( g := p, b := one, i := 1);
-  blockStack := StackCreate(100);
-  StackPush( blockStack, block);
-  while not StackIsEmpty(blockStack) do
-    block := StackPop(blockStack);
-    i := block.i;
-    if i+1 = k then
-      b := block.b;
-      orbAndStab.C[i+1] := ClosureGroup(orbAndStab.C[i+1],b);
-    else
-      isSplitStep := ladder.subgroupIndex[i] < ladder.subgroupIndex[i+1];
-      if isSplitStep then
-        canonizer := StroLLLightSplitOrbit(block,blockStack,p,k,orbAndStab,ladder);
-        if not canonizer = one then
-          return canonizer; 
-        fi;
+  if ladder.subgroupIndex[k-1] <> ladder.subgroupIndex[k] then
+    BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
+    block := rec( g := p, b := ladder.one, i := 1);
+    blockStack := StackCreate(100);
+    StackPush( blockStack, block);
+    while not StackIsEmpty(blockStack) do
+      block := StackPop(blockStack);
+      i := block.i;
+      if i+1 = k then
+        b := block.b;
+        orbAndStab.C[i+1] := ClosureGroup(orbAndStab.C[i+1],b);
       else
-        StroLLLightFuseOrbit(block,blockStack,p,orbAndStab,ladder);
+        if ladder.isSplitStep[i+1] then
+          canonizer := StroLLLightSplitOrbit(block,blockStack,p,k,orbAndStab,ladder);
+          if not canonizer = ladder.one then
+            return canonizer; 
+          fi;
+        else
+          StroLLLightFuseOrbit(block,blockStack,p,orbAndStab,ladder);
+        fi;
       fi;
-    fi;
-  od;
-  return one;
+    od;
+  fi;
+  return ladder.one;
 end;
 
 StroLLLightSplitCanonicalDCReps := function( i, p, orbAndStab, ladder) 
-  local pos, o, min, c, homAct, z, tmp;
-  BlockStabilizerReinitialize(p,i,orbAndStab,ladder);
-  pos := BlockPosition( p, i, orbAndStab, ladder );
-  o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
-  min := o.min;
-  if min < pos then
-    c := BlockStabilizerCanonizingElmnt( i, o.orbit, pos, min, orbAndStab);
-    return c; 
+  local pos, o, min, c, homAct, z, group, transv, tmp;
+  if ladder.subgroupIndex[i-1] = ladder.subgroupIndex[i] then
+    orbAndStab.C[i] := orbAndStab.C[i-1]; 
+  else
+    BlockStabilizerReinitialize(p,i,orbAndStab,ladder);
+    pos := BlockPosition( p, i, orbAndStab, ladder );
+    o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
+    min := o.min;
+    if min < pos then
+      c := BlockStabilizerCanonizingElmnt( i, o.orbit, pos, min, orbAndStab);
+      return c; 
+    fi;
+    transv := ladder.transversal[i];
+    homAct := function(x,h)
+      return PositionCanonical(transv,transv[x]*h);
+    end;
+    z := PathRepresentative(p,i-1,ladder);
+    group := orbAndStab.C[i-1]^(z^-1);
+    orbAndStab.C[i] := Stabilizer(group,min,homAct)^z; 
   fi;
-  homAct := function(x,h)
-    x := PositionCanonical(ladder.transversal[i],x*h);
-    return ladder.transversal[i][x];
-  end;
-  z := PathRepresentative(p,i-1,ladder);
-  tmp := Stabilizer(orbAndStab.C[i-1]^(z^-1),ladder.transversal[i],ladder.transversal[i][min],homAct); 
-  orbAndStab.C[i] := tmp^z; 
-  return One(p);
+  return ladder.one;
 end;
 
 
@@ -128,7 +132,7 @@ StroLLLightFindSmallerDCRep := function(g, k, ladder, B)
                 stabilizer := Group(One(g)));
   p := StroLLSmallestPathToCoset(g,k,ladder);
   for i in [ 2 .. k ] do
-    if  ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i]  then
+    if ladder.isSplitStep[i] then
       canonizer := StroLLLightSplitCanonicalDCReps(i,p,orbAndStab,ladder); 
     else
       canonizer := StroLLLightFuseCanonicalDCReps(i,p,orbAndStab,ladder);

@@ -28,15 +28,17 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
     orbAndStab.gensOfStab := [];
     orbAndStab.small := [];
     orbAndStab.homImageGensOfStab := [];
+    orbAndStab.small := [1];
   fi;
     
   for i in [ 2 .. n ] do
     if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
       # if p has changed, delete old data storage
-      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+      if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
         orbAndStab.p[i] := p;
         z := orbAndStab.z[i-1];
         pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
+        orbAndStab.small[i] := pos;
         canon := ladder.pathTransversal[i][pos];
         orbAndStab.z[i] := canon*z;
         orbAndStab.orbits[i] := [];
@@ -48,9 +50,11 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
       fi;
     else
       # if p has changed, delete old data storage
-      if false = IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+      if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
         orbAndStab.p[i] := p;
         z := orbAndStab.z[i-1];
+        pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
+        orbAndStab.small[i] := pos;
         orbAndStab.z[i] := z;
         orbAndStab.orbits[i] := [];
         orbAndStab.min[i] := [];
