@@ -43,7 +43,7 @@ StroLLLightDoubleCosets := function(k,B,ladder)
     g := coset.g;
     i := coset.i+1;
     stab := coset.stabilizer;
-    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
       U := ladder.cut1toI[i];
       V := ladder.cut1toI[i-1];
       preimage := RightTransversal(V,U);
@@ -158,7 +158,7 @@ end;
 ## the sequence of all a_i with even index is a subsequence of A008406.
 LeiterspielLightGraphGeneration := function(n,k)
   local graphs, B, ladder, cosets, m, sum, i;
-  if n < 0 or k < 0 or k > n*(n-1)/2 then
+  if n < 0 or k < 0 or 2*k > n*(n-1) then
     Error("There are no graphs on ",n," vertices with up to ",k," edges\n");
     return;
   fi;

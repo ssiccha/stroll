@@ -23,6 +23,7 @@ StrongLadderInit := function(groups,ladder)
   ladder.subgroupIndex := [1];
   ladder.hom := [];
   ladder.pathTransversal := [];
+  ladder.SmallestPathToCoset := [];
   return ladder;
 end;
 
@@ -44,14 +45,14 @@ StroLLCheckSubgroupChain := function(ladder,subgroup,i)
     if not IsSubset(ladder.chain[1],subgroup[i-1]) then
       Error("Entry ",i," in the ladder is not a subgroup of the first group");
     fi;
-    if IsSubset(subgroup[i],subgroup[i-1]) then
-      ladder.chain[i] := AsSubgroup(ladder.chain[1],subgroup[i]);
-      ladder.isSplitStep[i] := false;
-      ladder.isFuseStep[i] := true;
-    elif IsSubset(subgroup[i-1],subgroup[i]) then
+    if IsSubset(subgroup[i-1],subgroup[i]) then
       ladder.chain[i] := AsSubgroup(ladder.chain[1],subgroup[i]);
       ladder.isSplitStep[i] := true;
       ladder.isFuseStep[i] := false;
+    elif IsSubset(subgroup[i],subgroup[i-1]) then
+      ladder.chain[i] := AsSubgroup(ladder.chain[1],subgroup[i]);
+      ladder.isSplitStep[i] := false;
+      ladder.isFuseStep[i] := true;
     else
       Error("Entry ",i," in the grouplist is neither a subgroup of the group on position ",i-1,", nor the other way round\n"); 
     fi;
@@ -61,7 +62,7 @@ end;
 
 
 StroLLBuildIntersectionChain := function(ladder,i)
-  local intersection, U, V;
+  local intersection, U, transv, homAct, pos, V;
   if i = 1 then
     ladder.intersectionChain := [ladder.chain[1]];
   else
@@ -70,38 +71,74 @@ StroLLBuildIntersectionChain := function(ladder,i)
       # group[i-1] is a subgroup of group[i]
       intersection[i] := intersection[i-1];
       U := intersection[i];
-      V := intersection[i-1];
+      ladder.pathTransversal[i] := RightTransversal(U,U);   
     else
       # group[i] is a subgroup of group[i-1];
-      intersection[i] := Intersection(intersection[i-1],ladder.chain[i]);
+      transv := RightTransversal(ladder.chain[i-1],ladder.chain[i]);
+      homAct := function(x,h)
+        return PositionCanonical(transv,transv[x]*h);
+      end;
+      pos := PositionCanonical(transv,ladder.one);
+      intersection[i] := Stabilizer(intersection[i-1],pos,homAct);
       U := intersection[i-1];
       V := intersection[i];
+      ladder.pathTransversal[i] := RightTransversal(U,V);   
     fi;
-    ladder.pathTransversal[i] := RightTransversal(U,V);   
   fi;
 end;
 
 
 StroLLIntersectionMatrix := function(ladder,i)
-  local chain, tmp, j;
+  local chain, one, intersection, p, transv, homAct, pos, group, j;
   chain := ladder.chain;
   if i = 1 then
     ladder.intersection := [[chain[1]]];
   else
-    ladder.intersection[i] := [];
-    ladder.intersection[i][i] := chain[i];
-    ladder.intersection[1][i] := chain[i];
-    ladder.intersection[i][1] := chain[i];
+    one := ladder.one;
+    intersection := ladder.intersection;
+    intersection[i] := [];
+    intersection[i][i] := chain[i];
+    intersection[1][i] := chain[i];
+    intersection[i][1] := chain[i];
     for j in [2 .. i-1] do
-      if true = IsSubgroup(chain[i],chain[i-1]) then
-        # group[i-1] is a subgroup of group[i]
-        ladder.intersection[i][j] := Intersection(chain[j],chain[i]);
-        ladder.intersection[j][i] := ladder.intersection[i][j];
-      elif true = IsSubgroup(chain[i-1],chain[i]) then
+      if ladder.isFuseStep[j] and ladder.isFuseStep[i] then
+        # group[i-1] is a subgroup of group[i] and 
+        # group[j-1] is a subgroup of group[j]
+        # intersection[i][j] := intersection[i][j-1];
+        # p := StroLLSmallestPathToCoset(one,j,ladder);
+        # Print("\nIn StrollIntersectionMatrix FuseStep ",i," ",j);
+        # orbAndStab := rec(C := intersection[i]);
+        # BlockStabilizerReinitialize(p,j,orbAndStab,ladder);
+        # StroLLLightFuseCanonicalDCReps(j, p, orbAndStab, ladder);
+        # group := intersection[i][j];
+        intersection[i][j] := Intersection(chain[j],chain[i]);
+        intersection[j][i] := intersection[i][j];
+        # if group <> intersection[i][j] then
+        #   Print("\nStroLLLightFuseCanonicalDCReps(j-1):\n",intersection[i][j-1]);
+        #   Print("\nStroLLLightFuseCanonicalDCReps(j):\n",intersection[i][j]);
+        #   Print("\nIntersection:\n",group);
+        #   Error("\nhier in StroLLIntersectionMatrix passt doch was nicht\n");
+        # fi;
+      elif ladder.isSplitStep[i] then
         # group[i] is a subgroup of group[i-1];
-        tmp := ladder.intersection[i-1][j];
-        ladder.intersection[i][j] := Intersection(tmp,chain[i]);
-        ladder.intersection[j][i] := ladder.intersection[i][j];
+        transv := RightTransversal(ladder.chain[i-1],ladder.chain[i]);
+        homAct := function(x,h)
+          return PositionCanonical(transv,transv[x]*h);
+        end;
+        pos := PositionCanonical(transv,one);
+        group := intersection[i-1][j];
+        intersection[i][j] := Stabilizer(group,pos,homAct);
+        intersection[j][i] := intersection[i][j];
+      else
+        # group[j] is a subgroup of group[j-1]
+        transv := RightTransversal(ladder.chain[j-1],ladder.chain[j]);
+        homAct := function(x,h)
+          return PositionCanonical(transv,transv[x]*h);
+        end;
+        pos := PositionCanonical(transv,one);
+        group := intersection[i][j-1];
+        intersection[i][j] := Stabilizer(group,pos,homAct);
+        intersection[j][i] := intersection[i][j];
       fi;
     od;
   fi;
@@ -177,13 +214,14 @@ StroLLBuildTransversal := function(ladder,i)
 end;
 
 
-StroLLBuildSubladder := function(ladder)
-  local cut, split, pos, h, i, j, U, V;
-  ladder.cut1toI := [ladder.chain[1]];
-  ladder.cut1toJplusI := [[ladder.chain[1]]];
-  ladder.splitTransversal := [];
-  ladder.preimage := [];
-  for i in [ 2 .. Size(ladder.chain) ] do
+StroLLBuildSubladder := function(ladder,i)
+  local cut, split, pos, h, j, U, V;
+  if i = 1 then
+    ladder.cut1toI := [ladder.chain[1]];
+    ladder.cut1toJplusI := [[ladder.chain[1]]];
+    ladder.splitTransversal := [];
+    ladder.preimage := [];
+  else
     # cut1tojplusi[i][j] = A_1 \cap .. \cap A_j \cap A_i;
     cut := [ladder.chain[i]];
     split := []; 
@@ -213,7 +251,7 @@ StroLLBuildSubladder := function(ladder)
     ladder.cut1toI[i] := cut[i];
     ladder.cut1toJplusI[i] := cut; 
     ladder.splitTransversal[i] := split;
-  od;
+  fi;
 end;
 
 
@@ -227,10 +265,9 @@ StroLLBuildLadder := function(groups)
     StroLLIntersectionMatrix(ladder,i);
     StroLLBuildIntersectionChain(ladder,i);
     StroLLBuildTransversal(ladder,i);
+    StroLLBuildSubladder(ladder,i);
   od;
-  # BuildStroLLTransversalCompare(ladder);
-  StroLLBuildSubladder(ladder);
-  ladder.SmallestPathToCoset := [];
+  Print("\nLadder is now ready!\n");
   return ladder;
 end;
 
