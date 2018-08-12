@@ -70,7 +70,7 @@ StroLLLightDoubleCosets := function(k,B,ladder)
       # This is a depth first search algorithm so all stabilizers 
       # besides the last one stay unchanged.
       orbAndStab.C[i-1] := coset.stabilizer;
-      canonizer := StroLLLightFuseCanonicalDCReps(i,g,orbAndStab,ladder);
+      canonizer := StroLLLightFuseCanonicalDCReps(i,z,orbAndStab,ladder);
       if not one = canonizer then
         # this coset can be constructed from a smaller coset
         continue;

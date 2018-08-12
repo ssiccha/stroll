@@ -33,7 +33,7 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
   fi;
     
   for i in [ 2 .. n ] do
-    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
+    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
       # if p has changed, delete old data storage
       if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
         orbAndStab.p[i] := p;

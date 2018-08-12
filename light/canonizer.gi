@@ -19,7 +19,10 @@ StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
     min := orbAndStab.orbitMap[i+1][pos];
     if min <= small then
       orbit := orbAndStab.orbits[i+1][min];
-      c := BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
+      if not IsBound(orbAndStab.canon[i+1][pos]) then
+        BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
+      fi;
+      c := orbAndStab.canon[i+1][pos];
       if min = small then
         h := ladder.splitTransversal[k][i+1][l];
         block := rec( g := h*g, b := b*c, i := i+1 );
@@ -38,24 +41,41 @@ end;
 # Several A_ig yield the same A_{i+1}g.
 # StroLLLightFuseOrbit only puts exactly one of them onto the stack
 StroLLLightFuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
-  local g, i, b, c;
+  local g, i, b, z, h, perm, small, min;
   g := block.g;
   i := block.i;
   b := block.b;
-  if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
+  # if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
+  #   block := rec( g := g, b := b, i := i+1 );
+  #   StackPush(blockStack,block);
+  #   return;
+  # fi;
+  # prevent double processing:
+  # z := StroLLSmallestPathToCoset(g,i,ladder);
+  z := CanonicalRightCosetElement(ladder.chain[i+1],g);
+  h := orbAndStab.z[i]*b^-1*z^-1;
+  if not h in ladder.chain[i+1] then
+    Error("\ndas kann nicht stimmen!\n");
+  fi;
+  perm := Image(ladder.hom[i+1],h);
+  small := orbAndStab.small[i+1];
+  if not IsBound(orbAndStab.orbitMap[i+1][small]) then
+    BlockStabilizerOrbit( small, i+1, orbAndStab, ladder );
+  fi;
+  min := Minimum(List(orbAndStab.orbits[i+1][small],x->x^perm)); 
+  if min = PositionCanonical(ladder.transversal[i+1],g*z^-1) then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
-    return;
   fi;
   # prevent double processing:
   # the block is processed if and only if A_ig*z^-1*p is
   # the representative of its orbit under the action of
   # the group orbAndStab.C[i+1]
-  c := CanonicalRightCosetElement(orbAndStab.C[i+1]^(b^-1),b);
-  if g*c*p^-1 in ladder.chain[i] then
-    block := rec( g := g, b := b, i := i+1 );
-    StackPush(blockStack,block);
-  fi;
+  # c := CanonicalRightCosetElement(orbAndStab.C[i+1]^(b^-1),b);
+  # if g*c*p^-1 in ladder.chain[i] then
+  #   block := rec( g := g, b := b, i := i+1 );
+  #   StackPush(blockStack,block);
+  # fi;
 end;
 
 

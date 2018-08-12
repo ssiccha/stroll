@@ -178,7 +178,7 @@ end;
 #     If A_{i-1} <= A_i then rightcosets[i] stores the rightcosets 
 #     of A_{i-1} in A_i 
 StroLLBuildTransversal := function(ladder,i)
-  local chain, U, V, tmp, pos, j;
+  local chain, U, V, tmp, pos, perm, coset, j, gen;
   chain := ladder.chain;
   if i = 1 then
     ladder.transversal := [RightTransversal(ladder.G,ladder.G)];
@@ -207,6 +207,16 @@ StroLLBuildTransversal := function(ladder,i)
     fi;
     ladder.rightcosets[i] := RightCosets(U,V);
     ladder.hom[i] := FactorCosetAction(U,V);
+    for gen in GeneratorsOfGroup(U) do
+      perm := Image(ladder.hom[i],gen);
+      for j in [1 .. Size(ladder.transversal[i])] do
+        coset := ladder.transversal[i][j];
+        pos := PositionCanonical(ladder.transversal[i],coset*gen);
+        if j^perm <> pos then
+          Error("\nThis Mapping doesn't work as expected!\n");
+        fi;   
+      od; 
+    od;
     ladder.transvOnePos[i] := PositionCanonical(ladder.transversal[i],ladder.one);
   fi;
 end;
