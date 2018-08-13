@@ -45,18 +45,15 @@ StroLLLightFuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
   g := block.g;
   i := block.i;
   b := block.b;
-  # if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
-  #   block := rec( g := g, b := b, i := i+1 );
-  #   StackPush(blockStack,block);
-  #   return;
-  # fi;
+  if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
+    block := rec( g := g, b := b, i := i+1 );
+    StackPush(blockStack,block);
+    return;
+  fi;
   # prevent double processing:
   # z := StroLLSmallestPathToCoset(g,i,ladder);
   z := CanonicalRightCosetElement(ladder.chain[i+1],g);
   h := orbAndStab.z[i]*b^-1*z^-1;
-  if not h in ladder.chain[i+1] then
-    Error("\ndas kann nicht stimmen!\n");
-  fi;
   perm := Image(ladder.hom[i+1],h);
   small := orbAndStab.small[i+1];
   if not IsBound(orbAndStab.orbitMap[i+1][small]) then
