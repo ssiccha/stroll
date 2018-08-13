@@ -18,7 +18,7 @@ end;
 
 
 BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local z, pos, canon, gens, permlist, i;
+  local z, pos, canon, gens, permlist, min, orbit, i;
   # initialize data storage
   if not IsBound(orbAndStab.p) then
     orbAndStab.p := [];
@@ -49,6 +49,16 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
         orbAndStab.homImageGensOfStab[i] := permlist; 
+        for pos in [ 1 .. Size(ladder.transversal[i]) ] do
+          if not IsBound(orbAndStab.orbitMap[i][pos]) then
+            BlockStabilizerOrbit(pos,i,orbAndStab,ladder );
+          fi;
+          min := orbAndStab.orbitMap[i][pos];
+          orbit := orbAndStab.orbits[i][min];
+          if not IsBound(orbAndStab.canon[i][pos]) then
+            BlockStabilizerCanonizingElmnt(i,orbit,pos,min,orbAndStab);
+          fi;
+        od;
       fi;
     else
       # if p has changed, delete old data storage
@@ -65,6 +75,16 @@ BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
         orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
         permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
         orbAndStab.homImageGensOfStab[i] := permlist; 
+        for pos in [ 1 .. Size(ladder.transversal[i]) ] do
+          if not IsBound(orbAndStab.orbitMap[i][pos]) then
+            BlockStabilizerOrbit(pos,i,orbAndStab,ladder );
+          fi;
+          min := orbAndStab.orbitMap[i][pos];
+          orbit := orbAndStab.orbits[i][min];
+          if not IsBound(orbAndStab.canon[i][pos]) then
+            BlockStabilizerCanonizingElmnt(i,orbit,pos,min,orbAndStab);
+          fi;
+        od;
       fi;
     fi;
   od;

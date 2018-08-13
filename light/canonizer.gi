@@ -1,9 +1,9 @@
 
 # Returns One(g) if no smaller element was found.
 # Otherwise returns an element c s.t. A_{i+1}gc < A_{i+1}p
-StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
+StroLLLightSplitOrbit := function( blockStack, k, orbAndStab, ladder )
   local g, b, i, z, perm, small, preimage, pos, min, orbit, c, h, l;
-  # p := orbAndStab.p;
+  block := StackPop(blockStack);
   g := block.g;
   b := block.b;
   i := block.i;
@@ -13,15 +13,9 @@ StroLLLightSplitOrbit := function( block, blockStack, p, k, orbAndStab, ladder )
   preimage := ladder.preimage[k][i+1];
   for l in [ 1 .. Size(preimage)] do
     pos := preimage[l]^perm;
-    if not IsBound(orbAndStab.orbitMap[i+1][pos]) then
-      BlockStabilizerOrbit( pos, i+1, orbAndStab, ladder );
-    fi;
     min := orbAndStab.orbitMap[i+1][pos];
     if min <= small then
       orbit := orbAndStab.orbits[i+1][min];
-      if not IsBound(orbAndStab.canon[i+1][pos]) then
-        BlockStabilizerCanonizingElmnt( i+1, orbit, pos, min, orbAndStab);
-      fi;
       c := orbAndStab.canon[i+1][pos];
       if min = small then
         h := ladder.splitTransversal[k][i+1][l];
@@ -40,8 +34,9 @@ end;
 
 # Several A_ig yield the same A_{i+1}g.
 # StroLLLightFuseOrbit only puts exactly one of them onto the stack
-StroLLLightFuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
+StroLLLightFuseOrbit := function( blockStack, orbAndStab, ladder )
   local g, i, b, z, h, perm, small, min;
+  block := StackPop(blockStack);
   g := block.g;
   i := block.i;
   b := block.b;
@@ -56,23 +51,11 @@ StroLLLightFuseOrbit := function( block, blockStack, p, orbAndStab, ladder )
   h := orbAndStab.z[i]*b^-1*z^-1;
   perm := Image(ladder.hom[i+1],h);
   small := orbAndStab.small[i+1];
-  if not IsBound(orbAndStab.orbitMap[i+1][small]) then
-    BlockStabilizerOrbit( small, i+1, orbAndStab, ladder );
-  fi;
   min := Minimum(List(orbAndStab.orbits[i+1][small],x->x^perm)); 
   if min = PositionCanonical(ladder.transversal[i+1],g*z^-1) then
     block := rec( g := g, b := b, i := i+1 );
     StackPush(blockStack,block);
   fi;
-  # prevent double processing:
-  # the block is processed if and only if A_ig*z^-1*p is
-  # the representative of its orbit under the action of
-  # the group orbAndStab.C[i+1]
-  # c := CanonicalRightCosetElement(orbAndStab.C[i+1]^(b^-1),b);
-  # if g*c*p^-1 in ladder.chain[i] then
-  #   block := rec( g := g, b := b, i := i+1 );
-  #   StackPush(blockStack,block);
-  # fi;
 end;
 
 
@@ -90,19 +73,20 @@ StroLLLightFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
     blockStack := StackCreate(100);
     StackPush( blockStack, block);
     while not StackIsEmpty(blockStack) do
-      block := StackPop(blockStack);
+      block := StackPeek(blockStack);
       i := block.i;
       if i+1 = k then
         b := block.b;
         orbAndStab.C[i+1] := ClosureGroup(orbAndStab.C[i+1],b);
+        block := StackPop(blockStack);
       else
         if ladder.isSplitStep[i+1] then
-          canonizer := StroLLLightSplitOrbit(block,blockStack,p,k,orbAndStab,ladder);
+          canonizer := StroLLLightSplitOrbit(blockStack,k,orbAndStab,ladder);
           if not canonizer = ladder.one then
             return canonizer; 
           fi;
         else
-          StroLLLightFuseOrbit(block,blockStack,p,orbAndStab,ladder);
+          StroLLLightFuseOrbit(blockStack,orbAndStab,ladder);
         fi;
       fi;
     od;
@@ -110,24 +94,30 @@ StroLLLightFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
   return ladder.one;
 end;
 
+
 StroLLLightSplitCanonicalDCReps := function( i, p, orbAndStab, ladder) 
   local pos, o, min, c, homAct, z, group, transv, tmp;
   if ladder.subgroupIndex[i-1] = ladder.subgroupIndex[i] then
     orbAndStab.C[i] := orbAndStab.C[i-1]; 
   else
     BlockStabilizerReinitialize(p,i,orbAndStab,ladder);
-    pos := BlockPosition( p, i, orbAndStab, ladder );
-    o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
-    min := o.min;
+    #pos := BlockPosition( p, i, orbAndStab, ladder );
+    #pos := PositionCanonical(ladder.transversal[i],p*orbAndStab.z[i-1]^-1);
+    pos := orbAndStab.small[i];
+    #o := BlockStabilizerOrbit( pos, i, orbAndStab, ladder );
+    min := orbAndStab.orbitMap[i][pos];
+    #min := o.min;
     if min < pos then
-      c := BlockStabilizerCanonizingElmnt( i, o.orbit, pos, min, orbAndStab);
+      #c := BlockStabilizerCanonizingElmnt( i, o.orbit, pos, min, orbAndStab);
+      c := orbAndStab.canon[i][pos];
       return c; 
     fi;
     transv := ladder.transversal[i];
     homAct := function(x,h)
       return PositionCanonical(transv,transv[x]*h);
     end;
-    z := PathRepresentative(p,i-1,ladder);
+    #z := PathRepresentative(p,i-1,ladder);
+    z := orbAndStab.z[i-1];
     group := orbAndStab.C[i-1]^(z^-1);
     orbAndStab.C[i] := Stabilizer(group,min,homAct)^z; 
   fi;
