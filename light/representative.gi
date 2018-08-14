@@ -15,87 +15,6 @@ PathRepresentative := function(g,k,ladder)
 end;
 
 
-
-
-BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
-  local z, pos, canon, gens, permlist, min, orbit, i;
-  # initialize data storage
-  if not IsBound(orbAndStab.p) then
-    orbAndStab.p := [];
-    orbAndStab.z := [One(p)];
-    orbAndStab.orbits := [];
-    orbAndStab.gensOfStab := [];
-    orbAndStab.small := [];
-    orbAndStab.homImageGensOfStab := [];
-    orbAndStab.small := [1];
-    orbAndStab.orbitMap := [[1]];
-    orbAndStab.canon := [];
-  fi;
-    
-  for i in [ 2 .. n ] do
-    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-      # if p has changed, delete old data storage
-      if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
-        orbAndStab.p[i] := p;
-        z := orbAndStab.z[i-1];
-        pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
-        orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
-        canon := ladder.pathTransversal[i][pos];
-        orbAndStab.z[i] := canon*z;
-        orbAndStab.orbits[i] := [];
-        orbAndStab.orbitMap[i] := [];
-        orbAndStab.canon[i] := [];
-        gens := List(GeneratorsOfGroup(orbAndStab.C[i-1])); 
-        orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
-        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
-        orbAndStab.homImageGensOfStab[i] := permlist; 
-        for pos in [ 1 .. Size(ladder.transversal[i]) ] do
-          if not IsBound(orbAndStab.orbitMap[i][pos]) then
-            BlockStabilizerOrbit(pos,i,orbAndStab,ladder );
-          fi;
-          min := orbAndStab.orbitMap[i][pos];
-          orbit := orbAndStab.orbits[i][min];
-          if not IsBound(orbAndStab.canon[i][pos]) then
-            BlockStabilizerCanonizingElmnt(i,orbit,pos,min,orbAndStab);
-          fi;
-        od;
-      fi;
-    else
-      # if p has changed, delete old data storage
-      if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
-        orbAndStab.p[i] := p;
-        z := orbAndStab.z[i-1];
-        pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
-        orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
-        orbAndStab.z[i] := z;
-        orbAndStab.orbits[i] := [];
-        orbAndStab.orbitMap[i] := [];
-        orbAndStab.canon[i] := [];
-        gens := List(GeneratorsOfGroup(orbAndStab.C[i])); 
-        orbAndStab.gensOfStab[i] := List(gens, x -> x^(z^-1)); 
-        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
-        orbAndStab.homImageGensOfStab[i] := permlist; 
-        for pos in [ 1 .. Size(ladder.transversal[i]) ] do
-          if not IsBound(orbAndStab.orbitMap[i][pos]) then
-            BlockStabilizerOrbit(pos,i,orbAndStab,ladder );
-          fi;
-          min := orbAndStab.orbitMap[i][pos];
-          orbit := orbAndStab.orbits[i][min];
-          if not IsBound(orbAndStab.canon[i][pos]) then
-            BlockStabilizerCanonizingElmnt(i,orbit,pos,min,orbAndStab);
-          fi;
-        od;
-      fi;
-    fi;
-  od;
-end;
-
-
-BlockPosition := function(g,i,orbAndStab,ladder)
-  return PositionCanonical(ladder.transversal[i],g*(orbAndStab.z[i-1])^-1);
-end;
-
-
 OrbitFromGenerators := function(pos,gensImage,options)
   local isPointStabilizer, orbit, min, j;
   # element is not in one of the known orbits
@@ -192,6 +111,84 @@ BlockStabilizerCanonizingElmnt := function( i, orbit, pos, min, orbAndStab )
 end;
 
 
+
+
+BlockStabilizerReinitialize := function(p,n,orbAndStab,ladder)
+  local z, pos, canon, gens, permlist, min, orbit, i;
+  # initialize data storage
+  if not IsBound(orbAndStab.p) then
+    orbAndStab.p := [];
+    orbAndStab.z := [One(p)];
+    orbAndStab.orbits := [];
+    orbAndStab.gensOfStab := [];
+    orbAndStab.small := [];
+    orbAndStab.homImageGensOfStab := [];
+    orbAndStab.small := [1];
+    orbAndStab.orbitMap := [[1]];
+    orbAndStab.canon := [];
+  fi;
+    
+  for i in [ 2 .. n ] do
+    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
+      # if p has changed, delete old data storage
+      if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        orbAndStab.p[i] := p;
+        z := orbAndStab.z[i-1];
+        pos := PositionCanonical(ladder.pathTransversal[i],p*z^-1);
+        orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
+        canon := ladder.pathTransversal[i][pos];
+        orbAndStab.z[i] := canon*z;
+        orbAndStab.orbits[i] := [];
+        orbAndStab.orbitMap[i] := [];
+        orbAndStab.canon[i] := [];
+        orbAndStab.gensOfStab[i] := GeneratorsOfGroup(orbAndStab.C[i-1]); 
+        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        orbAndStab.homImageGensOfStab[i] := permlist; 
+        for pos in [ 1 .. Size(ladder.transversal[i]) ] do
+          if not IsBound(orbAndStab.orbitMap[i][pos]) then
+            BlockStabilizerOrbit(pos,i,orbAndStab,ladder );
+          fi;
+          min := orbAndStab.orbitMap[i][pos];
+          orbit := orbAndStab.orbits[i][min];
+          if not IsBound(orbAndStab.canon[i][pos]) then
+            BlockStabilizerCanonizingElmnt(i,orbit,pos,min,orbAndStab);
+          fi;
+        od;
+      fi;
+    else
+      # if p has changed, delete old data storage
+      if not IsBound(orbAndStab.p[i]) or not orbAndStab.p[i]*p^-1 in ladder.chain[i] then
+        orbAndStab.p[i] := p;
+        z := orbAndStab.z[i-1];
+        orbAndStab.small[i] := PositionCanonical(ladder.transversal[i],p*z^-1);
+        orbAndStab.z[i] := z;
+        orbAndStab.orbits[i] := [];
+        orbAndStab.orbitMap[i] := [];
+        orbAndStab.canon[i] := [];
+        orbAndStab.gensOfStab[i] := GeneratorsOfGroup(orbAndStab.C[i]);
+        permlist := List(orbAndStab.gensOfStab[i], x -> Image(ladder.hom[i],x));
+        orbAndStab.homImageGensOfStab[i] := permlist; 
+        for pos in [ 1 .. Size(ladder.transversal[i]) ] do
+          if not IsBound(orbAndStab.orbitMap[i][pos]) then
+            BlockStabilizerOrbit(pos,i,orbAndStab,ladder );
+          fi;
+          min := orbAndStab.orbitMap[i][pos];
+          orbit := orbAndStab.orbits[i][min];
+          if not IsBound(orbAndStab.canon[i][pos]) then
+            BlockStabilizerCanonizingElmnt(i,orbit,pos,min,orbAndStab);
+          fi;
+        od;
+      fi;
+    fi;
+  od;
+end;
+
+
+BlockPosition := function(g,i,orbAndStab,ladder)
+  return PositionCanonical(ladder.transversal[i],g*(orbAndStab.z[i-1])^-1);
+end;
+
+
 StroLLSmallestPathHelper := function( k, ladder )
   local one, stab, gens, pos, gensIm, options, orbit, min, c, i, j;
   one := ladder.one;
@@ -263,27 +260,4 @@ StroLLSmallestPathToCoset := function( g, k, ladder )
   return z;
 end; 
 
-IsSmallestPathToCoset := function( g, k, ladder )
-  local z, perm, orbit, min, pos, c, i;
-  if not IsBound(ladder.SmallestPathToCoset[k]) then
-    StroLLSmallestPathHelper(k,ladder);
-  fi;
-  z := ladder.one;
-  for i in [ 2 .. k ] do
-    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      perm := Image(ladder.hom[i],g);
-      orbit := ladder.SmallestPathToCoset[k].orbList[i];
-      min := Minimum(List(orbit,x -> x^perm));
-      pos := ladder.transvOnePos[i]^perm;
-      if pos <> min then
-        return false; 
-      fi;
-      min := ladder.representativeMap[i][min];
-      c := ladder.pathTransversal[i][min];
-      g := g*c^-1;
-      z := c*z;
-    fi; 
-  od;
-  return true;
-end; 
 

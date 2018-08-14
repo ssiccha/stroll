@@ -42,7 +42,6 @@ StroLLLightDoubleCosets := function(k,B,ladder)
     coset := StackPop(cosetStack);
     g := coset.g;
     i := coset.i+1;
-    stab := coset.stabilizer;
     if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
       U := ladder.cut1toI[i];
       V := ladder.cut1toI[i-1];
@@ -50,7 +49,8 @@ StroLLLightDoubleCosets := function(k,B,ladder)
       for h in preimage do
         canonizer := StroLLLightSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
         if one = canonizer then
-          coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
+          z := orbAndStab.z[i];
+          coset := rec(g := h*g, stabilizer := orbAndStab.C[i]^z,i := i);
           Add(L[i],coset);
           if not i = k then
             StackPush(cosetStack,coset);
@@ -69,13 +69,13 @@ StroLLLightDoubleCosets := function(k,B,ladder)
       # could have been overwritten.
       # This is a depth first search algorithm so all stabilizers 
       # besides the last one stay unchanged.
-      orbAndStab.C[i-1] := coset.stabilizer;
+      orbAndStab.C[i-1] := coset.stabilizer^(z^-1);
       canonizer := StroLLLightFuseCanonicalDCReps(i,z,orbAndStab,ladder);
       if not one = canonizer then
         # this coset can be constructed from a smaller coset
         continue;
       fi;
-      coset := rec(g := g, stabilizer := orbAndStab.C[i], i := i);
+      coset := rec(g := g, stabilizer := orbAndStab.C[i]^z, i := i);
       Add(L[i],coset);
       if not i = k then
         StackPush(cosetStack,coset);
