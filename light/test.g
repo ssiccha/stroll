@@ -26,130 +26,6 @@ end;
 
 
 
-StroLLLightDoubleCosets := function(k,B,ladder)
-  local one, orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
-  one := One(B);
-  orbAndStab := rec();
-  orbAndStab.C := [B];
-  cosetStack := StackCreate(100);
-  coset := rec(g := One(B), stabilizer := B, i := 1);
-  StackPush(cosetStack,coset);
-  L := [ [coset] ];
-  for i in [ 2 .. k ] do
-    L[i] := [];
-  od;
-  while not StackIsEmpty(cosetStack) do
-    coset := StackPop(cosetStack);
-    g := coset.g;
-    i := coset.i+1;
-    if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
-      U := ladder.cut1toI[i];
-      V := ladder.cut1toI[i-1];
-      preimage := RightTransversal(V,U);
-      for h in preimage do
-        canonizer := StroLLLightSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
-        if one = canonizer then
-          z := orbAndStab.z[i];
-          coset := rec(g := h*g, stabilizer := orbAndStab.C[i]^z,i := i);
-          Add(L[i],coset);
-          if not i = k then
-            StackPush(cosetStack,coset);
-          fi;
-        fi;
-      od;
-    else
-      # If p is the smallest path to A_ip, then 
-      # A_ig should be constructed from the coset A_{i-1}p.
-      # So the check for canonity can be done with this z: 
-      z := StroLLSmallestPathToCoset(g,i,ladder);
-      if not g*z^-1 in ladder.chain[i-1] then
-        continue;
-      fi;
-      # In a breadth first search algorithm the stabilizer orbAndStab.C[i-1] 
-      # could have been overwritten.
-      # This is a depth first search algorithm so all stabilizers 
-      # besides the last one stay unchanged.
-      orbAndStab.C[i-1] := coset.stabilizer^(z^-1);
-      canonizer := StroLLLightFuseCanonicalDCReps(i,z,orbAndStab,ladder);
-      if not one = canonizer then
-        # this coset can be constructed from a smaller coset
-        continue;
-      fi;
-      coset := rec(g := g, stabilizer := orbAndStab.C[i]^z, i := i);
-      Add(L[i],coset);
-      if not i = k then
-        StackPush(cosetStack,coset);
-      fi;
-    fi; 
-  od;
-  return L;
-end;
-
-
-
-StroLLBreadthDoubleCosets := function(k,B,ladder)
-  local one, orbAndStab, cosetStack, coset, stabilizer, i, L, g, stab, U, V, preimage, canonizer, z, h;
-  one := One(B);
-  orbAndStab := rec();
-  orbAndStab.C := [B];
-  cosetStack := StackCreate(100);
-  coset := rec(g := One(B), stabilizer := B, i := 1);
-  StackPush(cosetStack,coset);
-  L := [ [coset] ];
-  for i in [ 2 .. k ] do
-    L[i] := [];
-  od;
-  while not StackIsEmpty(cosetStack) do
-    coset := StackPop(cosetStack);
-    g := coset.g;
-    i := coset.i+1;
-    Print("StackPop(",g,",",i-1,")\n");
-    stab := coset.stabilizer;
-    if ladder.subgroupIndex[i-1] < ladder.subgroupIndex[i] then
-      U := ladder.cut1toI[i];
-      V := ladder.cut1toI[i-1];
-      preimage := RightTransversal(V,U);
-      for h in preimage do
-        canonizer := StroLLBreadthSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
-        if one = canonizer then
-          coset := rec(g := h*g, stabilizer := orbAndStab.C[i],i := i);
-          Add(L[i],coset);
-          if not i = k then
-            StackPush(cosetStack,coset);
-            Print("StackPush(",h*g,",",i,")\n");
-          fi;
-        fi;
-      od;
-    else
-      # If p is the smallest path to A_ip, then 
-      # A_ig should be constructed from the coset A_{i-1}p.
-      # So the check for canonity can be done with this z: 
-      z := StroLLSmallestPathToCoset(g,i,ladder);
-      if not g*z^-1 in ladder.chain[i-1] then
-        continue;
-      fi;
-      g := z;
-      # In a breadth first search algorithm the stabilizer orbAndStab.C[i-1] 
-      # could have been overwritten.
-      # This is a depth first search algorithm so all stabilizers 
-      # besides the last one stay unchanged.
-      orbAndStab.C[i-1] := coset.stabilizer;
-      canonizer := StroLLBreadthFuseCanonicalDCReps(i,g,orbAndStab,ladder);
-      if not one = canonizer then
-        # this coset can be constructed from a smaller coset
-        continue;
-      fi;
-      coset := rec(g := g, stabilizer := orbAndStab.C[i], i := i);
-      Add(L[i],coset);
-      if not i = k then
-        StackPush(cosetStack,coset);
-        Print("StackPush(",g,",",i,")\n");
-      fi;
-    fi; 
-  od;
-  return L;
-end;
-
 
 
 
@@ -254,8 +130,6 @@ CreateRandomGraphWithLadderAndB := function(i, n)
 end;
 
 
-
-
 LeiterspielLightGraphGenerationProfiling := function(n,k)
   local fkts;
   ClearProfile();
@@ -280,6 +154,40 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
           ];
   ProfileFunctions(fkts);
   LeiterspielLightGraphGeneration(n,k);
+  DisplayProfile();
+  UnprofileFunctions(fkts);
+  ClearProfile();
+end;
+
+
+
+
+
+
+LeiterspielBreadthGraphGenerationProfiling := function(n,k)
+  local fkts;
+  ClearProfile();
+  fkts := [CanonicalRightCosetElement
+          ,StroLLLightSplitCanonicalDCReps
+          ,StroLLLightSplitCanonicalDCReps
+          #,FindOrbitRep
+          ,StroLLLightFindSmallerDCRep
+          ,StroLLLightFuseOrbit
+          ,GraphGroup
+          ,StandardPermutationLadder
+          ,StroLLLightDoubleCosets
+          ,PathRepresentative
+          ,BlockStabilizerOrbit
+          ,StroLLSmallestPathToCoset
+          ,StroLLLightSplitOrbit
+          ,BlockPosition
+          ,BlockStabilizerReinitialize
+          ,PositionCanonical
+          ,StroLLSmallestPathHelper
+          ,Image
+          ];
+  ProfileFunctions(fkts);
+  LeiterspielBreadthGraphGeneration(n,k);
   DisplayProfile();
   UnprofileFunctions(fkts);
   ClearProfile();

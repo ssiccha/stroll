@@ -46,7 +46,7 @@ StroLLCheckSubgroupChain := function(ladder,subgroup,i)
       Error("Entry ",i," in the ladder is not a subgroup of the first group");
     fi;
     if IsSubset(subgroup[i-1],subgroup[i]) then
-      ladder.chain[i] := AsSubgroup(ladder.chain[1],subgroup[i]);
+      ladder.chain[i] := AsSubgroup(ladder.chain[i-1],subgroup[i]);
       ladder.isSplitStep[i] := true;
       ladder.isFuseStep[i] := false;
     elif IsSubset(subgroup[i],subgroup[i-1]) then
@@ -236,7 +236,7 @@ StroLLBuildSubladder := function(ladder,i)
     ladder.preimage[i] := [];
     for j in [ 2 .. i ] do
       ladder.preimage[i][j] := [];
-      if ladder.subgroupIndex[j-1] < ladder.subgroupIndex[j] then
+      if ladder.subgroupIndex[j-1] <= ladder.subgroupIndex[j] then
         cut[j] := Intersection(ladder.chain[j],cut[j-1]);
         U := ladder.intersection[i][j-1];
         V := ladder.intersection[i][j];

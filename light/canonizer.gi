@@ -21,7 +21,7 @@ StroLLLightSplitOrbit := function( blockStack, k, orbAndStab, ladder )
         h := ladder.splitTransversal[k][i+1][l];
         block := rec( g := h*g, b := b*c, i := i+1 );
         StackPush(blockStack,block);
-      elif min < small then
+      else
         return b*c;
       fi;
     fi;
@@ -65,29 +65,30 @@ end;
 # If it finds a smaller path it returns a c with A_kpc < A_kp
 # It also calculates the stabilizer of A_kp in B.
 StroLLLightFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
-  local block, blockStack, i, b, z, canonizer;
-  orbAndStab.C[k] := orbAndStab.C[k-1];
+  local coset, stack, i, b, z, canonizer;
+  orbAndStab.C[k] := AsSubgroup(ladder.chain[k],orbAndStab.C[k-1]);
   if ladder.subgroupIndex[k-1] <> ladder.subgroupIndex[k] then
     BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
-    block := rec( g := p, b := ladder.one, i := 1);
-    blockStack := StackCreate(100);
-    StackPush( blockStack, block);
-    while not StackIsEmpty(blockStack) do
-      block := StackPeek(blockStack);
-      i := block.i;
+    coset := rec( g := p, b := ladder.one, i := 1);
+    stack := StackCreate(100);
+    StackPush( stack, coset);
+    while not StackIsEmpty(stack) do
+      coset := StackPeek(stack);
+      i := coset.i;
       if i+1 = k then
-        b := block.b;
+        b := coset.b;
         z := orbAndStab.z[i];
-        orbAndStab.C[i+1] := ClosureGroup(orbAndStab.C[i+1],b^(z^-1));
-        StackPop(blockStack);
+        #orbAndStab.C[k] := ClosureGroup(orbAndStab.C[k],b^(z^-1));
+        orbAndStab.C[k] := ClosureSubgroupNC(orbAndStab.C[k],b^(z^-1));
+        StackPop(stack);
       else
         if ladder.isSplitStep[i+1] then
-          canonizer := StroLLLightSplitOrbit(blockStack,k,orbAndStab,ladder);
+          canonizer := StroLLLightSplitOrbit(stack,k,orbAndStab,ladder);
           if not canonizer = ladder.one then
             return canonizer; 
           fi;
         else
-          StroLLLightFuseOrbit(blockStack,orbAndStab,ladder);
+          StroLLLightFuseOrbit(stack,orbAndStab,ladder);
         fi;
       fi;
     od;
@@ -110,11 +111,16 @@ StroLLLightSplitCanonicalDCReps := function( i, p, orbAndStab, ladder)
     return PositionCanonical(transv,transv[x]*h);
   end;
   if ladder.subgroupIndex[i-1] = ladder.subgroupIndex[i] then
-    orbAndStab.C[i] := orbAndStab.C[i-1]; 
+    orbAndStab.C[i] := AsSubgroup(ladder.chain[i],orbAndStab.C[i-1]);
+    #orbAndStab.C[i] := orbAndStab.C[i-1]; 
   else
     z := orbAndStab.z[i]*orbAndStab.z[i-1]^-1;
     group := orbAndStab.C[i-1];
-    orbAndStab.C[i] := Stabilizer(group,min,homAct)^(z^-1); 
+    group := Stabilizer(group,min,homAct)^(z^-1); 
+    #group := SmallGeneratingSet(group);
+    #group := AsGroup(orbAndStab.C[i]);
+    #group := Subgroup(ladder.chain[i],group);
+    orbAndStab.C[i] := AsSubgroup(ladder.chain[i],group);
   fi;
   return ladder.one;
 end;
@@ -145,6 +151,67 @@ StroLLLightFindSmallerDCRep := function(g, k, ladder, B)
   return result;
 end;
 
+
+
+StroLLLightDoubleCosets := function(k,B,ladder)
+  local one, orbAndStab, cosetStack, coset, i, L, g, stab, U, V, preimage, canonizer, z, h;
+  one := One(B);
+  orbAndStab := rec();
+  orbAndStab.C := [B];
+  cosetStack := StackCreate(100);
+  coset := rec(g := one, stabilizer := B, i := 1);
+  StackPush(cosetStack,coset);
+  L := [ [coset] ];
+  for i in [ 2 .. k ] do
+    L[i] := [];
+  od;
+  while not StackIsEmpty(cosetStack) do
+    coset := StackPop(cosetStack);
+    g := coset.g;
+    i := coset.i+1;
+    # if ladder.subgroupIndex[i-1] <= ladder.subgroupIndex[i] then
+    if ladder.isSplitStep[i] then
+      U := ladder.cut1toI[i];
+      V := ladder.cut1toI[i-1];
+      preimage := RightTransversal(V,U);
+      for h in preimage do
+        canonizer := StroLLLightSplitCanonicalDCReps(i,h*g,orbAndStab,ladder);
+        if one = canonizer then
+          z := orbAndStab.z[i];
+          coset := rec(g := h*g, stabilizer := orbAndStab.C[i]^z,i := i);
+          Add(L[i],coset);
+          if not i = k then
+            StackPush(cosetStack,coset);
+          fi;
+        fi;
+      od;
+    else
+      # If p is the smallest path to A_ip, then 
+      # A_ig should be constructed from the coset A_{i-1}p.
+      # So the check for canonity can be done with this z: 
+      z := StroLLSmallestPathToCoset(g,i,ladder);
+      if not g*z^-1 in ladder.chain[i-1] then
+        continue;
+      fi;
+      # In a breadth first search algorithm the stabilizer orbAndStab.C[i-1] 
+      # could have been overwritten.
+      # This is a depth first search algorithm so all stabilizers 
+      # besides the last one stay unchanged.
+      orbAndStab.C[i-1] := coset.stabilizer^(z^-1);
+      canonizer := StroLLLightFuseCanonicalDCReps(i,z,orbAndStab,ladder);
+      if not one = canonizer then
+        # this coset can be constructed from a smaller coset
+        continue;
+      fi;
+      coset := rec(g := g, stabilizer := orbAndStab.C[i]^z, i := i);
+      Add(L[i],coset);
+      if not i = k then
+        StackPush(cosetStack,coset);
+      fi;
+    fi; 
+  od;
+  return L;
+end;
 
 
 
