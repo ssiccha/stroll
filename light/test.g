@@ -20,11 +20,19 @@ GraphGroup := function(n)
   omega := Orbit( SymmetricGroup(n), [1,2], OnSets ); 
   omega := List(omega);
   Sort(omega);
-  hom := ActionHomomorphism(SymmetricGroup(n),omega,OnSets);
+  hom := ActionHomomorphism(SymmetricGroup(n),omega,OnSets,"surjective");
   return Image(hom);
 end;
 
 
+GraphGroupHomomorphism := function(n)
+  local omega, hom;
+  omega := Orbit( SymmetricGroup(n), [1,2], OnSets ); 
+  omega := List(omega);
+  Sort(omega);
+  hom := ActionHomomorphism(SymmetricGroup(n),omega,OnSets,"surjective");
+  return hom;
+end;
 
 
 
@@ -44,8 +52,10 @@ LeiterspielLightGraphGeneration := function(n,k)
     return;
   fi;
   graphs := [1];
-  B := GraphGroup(n);
   ladder := StandardPermutationLadder(n*(n-1)/2);
+  #B := GraphGroup(n);
+  B := Image(GraphGroupHomomorphism(n)); 
+  ladder.GraphGroupHomomorphism := GraphGroupHomomorphism(n);
   cosets := StroLLLightDoubleCosets(k*2,B,ladder);
   for i in [ 1 .. k ] do 
     m := Size(cosets[2*i]);
@@ -80,8 +90,11 @@ LeiterspielBreadthGraphGeneration := function(n,k)
     return;
   fi;
   graphs := [1];
-  B := GraphGroup(n);
+  #B := GraphGroup(n);
+  B := Image(GraphGroupHomomorphism(n)); 
+  Print("Graph Group is: \t",B);
   ladder := StandardPermutationLadder(n*(n-1)/2);
+  ladder.GraphGroupHomomorphism := GraphGroupHomomorphism(n);
   cosets := StroLLBreadthDoubleCosets(k*2,B,ladder);
   for i in [ 1 .. k ] do 
     m := Size(cosets[2*i]);
@@ -123,7 +136,8 @@ CreateRandomGraphWithLadderAndB := function(i, n)
   if i > Size(ladder.chain)  then
     Error("there is no ladder group for such a big index i"); 
   fi;
-  B := GraphGroup(n); 
+  #B := GraphGroup(n); 
+  B := Image(GraphGroupHomomorphism(n)); 
   g := PseudoRandom(ladder.G);
   result := rec( g := g, ladder := ladder, B := B );
   return result;
@@ -140,6 +154,7 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
           ,StroLLLightFindSmallerDCRep
           ,StroLLLightFuseOrbit
           ,GraphGroup
+          ,GraphGroupHomomorphism
           ,StandardPermutationLadder
           ,StroLLLightDoubleCosets
           ,PathRepresentative
@@ -174,6 +189,7 @@ LeiterspielBreadthGraphGenerationProfiling := function(n,k)
           ,StroLLLightFindSmallerDCRep
           ,StroLLLightFuseOrbit
           ,GraphGroup
+          ,GraphGroupHomomorphism
           ,StandardPermutationLadder
           ,StroLLLightDoubleCosets
           ,PathRepresentative
