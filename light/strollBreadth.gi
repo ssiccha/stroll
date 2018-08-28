@@ -110,50 +110,35 @@ StroLLBreadthSplitOrbit := function( queue, p, k, orbAndStab, ladder )
   preimage := ladder.preimage[k][i+1];
   child := [];
   coset.child := child;
-  Print("\n\nIn StroLLBreadthSplitOrbit:");
-  Print("\n\t              \t");
-  StroLLPrint(coset);
+  stab := coset.stabilizer;
+  gens := GeneratorsOfGroup(stab); 
+  acts := List(gens,x -> Image(ladder.hom[i+1],x));
   for l in [ 1 .. Size(preimage)] do
     pos2 := preimage[l];
     pos1 := pos2^perm;
-    if IsBound(child[pos2]) then
-      continue; 
-    fi;
     min := orbAndStab.orbitMap[i+1][pos1];
-    if min <= small then
-      orbit := orbAndStab.orbits[i+1][min];
+    if min <= small and not IsBound(child[pos2]) then
       c := orbAndStab.canon[i+1][pos1];
-      if min = small then
+      if min < small then
+        return b*c;
+      # elif Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
+      #   child[pos2] := rec( g := g, b := b, i := i+1 );
+      #   child[pos2].stabilizer := coset.stabilizer;
+      else
         h := ladder.splitTransversal[k][i+1][l];
-        if pos2 <> PositionCanonical(ladder.transversal[i+1],h) then
-          Error("\nWarum geht das nicht?\n"); 
-        fi;
         child[pos2] := rec( g := h*g, b := b*c, i := i+1 );
-        stab := coset.stabilizer;
-        gens := GeneratorsOfGroup(stab); 
-        acts := List(gens,x -> Image(ladder.hom[i+1],x));
         tmp := OrbitStabilizer(stab,pos2,gens,acts,OnPoints);
         child[pos2].stabilizer := tmp.stabilizer^(h^-1);
         for o in tmp.orbit do
           if o <> pos2 then
             c := RepresentativeAction(stab,o,pos2,gens,acts,OnPoints)^g;
-            if not c in orbAndStab.C[1] then
-              Error("\nDas darf doch nicht sein!\n");
-            fi;
             child[o] := rec(canonizer := c, canonical := child[pos2]);
           fi;
         od;
         QueuePushBack(queue,child[pos2]);
-        Print("\n\tQueuePushBack:\t");
-        StroLLPrint(child[pos2]);
-      else
-        return b*c;
       fi;
     fi;
   od;
-  #Unbind(coset.stabilizer);
-  #Unbind(coset.b);
-  #Unbind(coset.i);
   return ladder.one; 
 end;
 
@@ -161,65 +146,37 @@ end;
 # Several A_ig yield the same A_{i+1}g.
 # StroLLBreadthFuseOrbit only puts exactly one of them onto the stack
 StroLLBreadthFuseOrbit := function( tree, queue, p, orbAndStab, ladder )
-  local coset, g, b, i, z, stabilizer, pos, min, orbit, c, tmp, node, x;
+  local coset, g, b, i, stabilizer, pos, min, orbit, c, tmp, node, x;
   coset := QueuePopFront(queue);
   # prevent double processing:
   if IsBound(coset.child) then
     return;
   fi;
-  Print("\n\nIn StroLLBreadthSplitOrbit:");
-  Print("\n\t              \t");
-  StroLLPrint(coset);
   g := coset.g;
   b := coset.b;
   i := coset.i;
-  z := orbAndStab.z[i];
   coset.child := rec(g := g, b := b, i := i+1);
   stabilizer := AsSubgroup(ladder.chain[i+1],coset.stabilizer);
-  # if Size(orbAndStab.C[i]) = Size(orbAndStab.C[i+1]) then
-  #   child := rec( stabilizer := dc.stabilizer, z := dc.z );
-  #   dc.child := [child];
-  #   Unbind(dc.stabilizer);
-  #   coset := rec( g := g, b := b, i := i+1, dc := child );
-  #   QueuePushBack(queue,coset);
-  #   return;
-  # fi;
-  pos := orbAndStab.small[i+1]; 
-  min := orbAndStab.orbitMap[i+1][pos];
-  orbit := orbAndStab.orbits[i+1][min];
-  if Size(orbAndStab.C[i+1])/Size(orbAndStab.C[i]) <> Size(orbit) then
-    Error("\nDas kann gar nicht sein!(1)\n"); 
-  fi;
-  for x in orbit do
-    c := orbAndStab.canon[i+1][x];
-    if min <> pos then
-      Error("\ndieser Fall kommt tatsächlich vor!\n");
-      c := c*orbAndStab.canon[i+1][pos]^-1;
-    fi;
-    # c := c^z;
-    if not c in orbAndStab.C[1] then
-      Error("\nDas kann doch nicht sein!(2)\n");
-    fi;
-    tmp := StroLLBreadthFindCanonicalNode(p*c^-1*b^-1,i,tree,ladder); 
-    node := tmp.canonical;
-    c := tmp.canonizer;
-    if not c in orbAndStab.C[1] then
-      Error("\nDas kann doch nicht sein!(3)\n");
-    fi;
-    if IsIdenticalObj(node,coset) then
-      if not g*c*g^-1 in ladder.chain[i+1] then
-        Error("\nFehler in StroLLBreadthFuseOrbit\n"); 
+  if Size(orbAndStab.C[i]) <> Size(orbAndStab.C[i+1]) then
+    pos := orbAndStab.small[i+1]; 
+    min := orbAndStab.orbitMap[i+1][pos];
+    orbit := orbAndStab.orbits[i+1][min];
+    for x in orbit do
+      if x <> min then
+        c := orbAndStab.canon[i+1][x];
+        tmp := StroLLBreadthFindCanonicalNode(p*c^-1*b^-1,i,tree,ladder); 
+        node := tmp.canonical;
+        c := tmp.canonizer;
+        if IsIdenticalObj(node,coset) then
+          stabilizer := ClosureSubgroupNC(stabilizer,c^(g^-1));
+        elif not IsBound(node.child) then
+          node.child := rec();
+          node.child.canonical := coset.child;
+          node.child.canonizer := c^-1;
+        fi;
       fi;
-      stabilizer := ClosureSubgroupNC(stabilizer,c^(g^-1));
-    elif not IsBound(node.child) then
-      node.child := rec();
-      node.child.canonical := coset.child;
-      node.child.canonizer := c^-1;
-    fi;
-  od;
-  #Unbind(coset.stabilizer);
-  #Unbind(coset.b);
-  #Unbind(coset.i);
+    od;
+  fi;
   coset.child.stabilizer := stabilizer;
   QueuePushBack(queue,coset.child);
 end;
@@ -231,76 +188,32 @@ end;
 # If it finds a smaller path it returns a c with A_kpc < A_kp
 # It also calculates the stabilizer of A_kp in B.
 StroLLBreadthFuseCanonicalDCReps := function( k, p, orbAndStab, ladder)
-  local coset, queue, tree, intersection, i, g, b, z, canonizer;
-  orbAndStab.C[k] := AsSubgroup(ladder.chain[k],orbAndStab.C[k-1]);
-  if ladder.subgroupIndex[k-1] <> ladder.subgroupIndex[k] then
-    BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
-    coset := rec( g := p, b := ladder.one, i := 1);
-    coset.stabilizer := orbAndStab.C[k];
-    queue := QueueCreate();
-    QueuePushBack(queue, coset);
-    tree := coset;
-
-    coset := rec( g := p, b := ladder.one, i := k);
-    coset.stabilizer := orbAndStab.C[k];
-    Print("\n\n\n\n####################################\n");
-    Print("\nIn StroLLBreadthFuseCanonicalDCReps: k := ",k," p := ",p);
-    Print("\n\t              \t");
-    StroLLPrint(coset);
-
-    for i in [ 2 .. k-1 ] do
-      z := orbAndStab.z[i];
-      intersection := Intersection(ladder.chain[i],orbAndStab.C[1]^(z^-1));
-      if intersection <> orbAndStab.C[i] then
-        Error("\nThe given stabilizer is wrong (i := ",i,")\n");
-      fi;
-    od;
-
-    while not QueueEmpty(queue) do
-      coset := QueueFront(queue);
-      i := coset.i;
-      g := coset.g;
-      if i+1 = k then
-        b := coset.b;
-        z := orbAndStab.z[i];
-        #orbAndStab.C[k] := ClosureGroup(orbAndStab.C[k],b^(z^-1));
-        if not b^(z^-1) in ladder.chain[k] then
-          Error("\nThe Stabilizer is wrong(1)"); 
-        fi;
-        if not b in ladder.chain[1] then
-          Error("\nThe Stabilizer is wrong(2)"); 
-        fi;
-        #Print("\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-        #Print("\nExtend the stabilizer by element ",b);
-        #Print("\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-        orbAndStab.C[k] := ClosureSubgroupNC(orbAndStab.C[k],b^(z^-1));
-        QueuePopFront(queue);
-      else
-        z := orbAndStab.z[k-1];
-        intersection := orbAndStab.C[k-1]^(z*g^-1);
-        intersection := Intersection(intersection,ladder.chain[i]);
-        if coset.stabilizer <> intersection then
-          Error("\nThe Stabilizer is wrong(3)"); 
-        fi;
-        if ladder.isSplitStep[i+1] then
-          canonizer := StroLLBreadthSplitOrbit(queue,p,k,orbAndStab,ladder);
-          if not canonizer = ladder.one then
-            return canonizer; 
-          fi;
-        else 
-          StroLLBreadthFuseOrbit(tree,queue,p,orbAndStab,ladder);
-        fi;
-      fi;
-    od;
-
-    coset := rec( g := p, b := ladder.one, i := k);
-    coset.stabilizer := orbAndStab.C[k];
-    Print("\n\n\nEnde StroLLBreadthFuseCanonicalDCReps: k := ",k," p := ",p);
-    Print("\n\t              \t");
-    StroLLPrint(coset);
-    Print("\n\n\n\n####################################\n");
-
+  local coset, queue, tree, i, b, z, canonizer;
+  if ladder.isSplitStep[k] then
+    Error("\nThis function must not be used for splitting steps!\n");
   fi;
+  orbAndStab.C[k] := AsSubgroup(ladder.chain[k],orbAndStab.C[k-1]);
+  BlockStabilizerReinitialize(p,k-1,orbAndStab, ladder);
+  coset := rec( g := p, b := ladder.one, i := 1);
+  coset.stabilizer := orbAndStab.C[k];
+  queue := QueueCreate();
+  QueuePushBack(queue, coset);
+  tree := coset;
+  z := orbAndStab.z[k-1];
+  while not QueueEmpty(queue) do
+    i := QueueFront(queue).i;
+    if i+1 = k then
+      b := QueuePopFront(queue).b;
+      orbAndStab.C[k] := ClosureSubgroupNC(orbAndStab.C[k],b^(z^-1));
+    elif ladder.isSplitStep[i+1] then
+      canonizer := StroLLBreadthSplitOrbit(queue,p,k,orbAndStab,ladder);
+      if not canonizer = ladder.one then
+        return canonizer; 
+      fi;
+    else 
+      StroLLBreadthFuseOrbit(tree,queue,p,orbAndStab,ladder);
+    fi;
+  od;
   return ladder.one;
 end;
 

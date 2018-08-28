@@ -84,17 +84,17 @@ LeiterspielBreadthGraphGeneration := function(n,k)
     Error("There are no graphs on ",n," vertices with up to ",k," edges\n");
     return;
   fi;
+  graphs := [1];
+  #B := GraphGroup(n);
+  B := Image(GraphGroupHomomorphism(n)); 
+  #Print("Graph Group is: \t",B);
+  ladder := StandardPermutationLadder(n*(n-1)/2);
+  ladder.GraphGroupHomomorphism := GraphGroupHomomorphism(n);
   Print("\nConstructing all graphs on ",n," vertices with up to ",k," edges:\n");
   Print(1," graphs with ",0," edges\n"); 
   if k < 1 or n < 2 then
     return;
   fi;
-  graphs := [1];
-  #B := GraphGroup(n);
-  B := Image(GraphGroupHomomorphism(n)); 
-  Print("Graph Group is: \t",B);
-  ladder := StandardPermutationLadder(n*(n-1)/2);
-  ladder.GraphGroupHomomorphism := GraphGroupHomomorphism(n);
   cosets := StroLLBreadthDoubleCosets(k*2,B,ladder);
   for i in [ 1 .. k ] do 
     m := Size(cosets[2*i]);
@@ -148,7 +148,7 @@ LeiterspielLightGraphGenerationProfiling := function(n,k)
   local fkts;
   ClearProfile();
   fkts := [CanonicalRightCosetElement
-          ,StroLLLightSplitCanonicalDCReps
+          ,StroLLLightFuseCanonicalDCReps
           ,StroLLLightSplitCanonicalDCReps
           #,FindOrbitRep
           ,StroLLLightFindSmallerDCRep
@@ -183,19 +183,20 @@ LeiterspielBreadthGraphGenerationProfiling := function(n,k)
   local fkts;
   ClearProfile();
   fkts := [CanonicalRightCosetElement
-          ,StroLLLightSplitCanonicalDCReps
-          ,StroLLLightSplitCanonicalDCReps
+          ,StroLLBreadthSplitCanonicalDCReps
+          ,StroLLBreadthFuseCanonicalDCReps
+          ,StroLLBreadthFindCanonicalNode
           #,FindOrbitRep
           ,StroLLLightFindSmallerDCRep
-          ,StroLLLightFuseOrbit
+          ,StroLLBreadthFuseOrbit
+          ,StroLLBreadthSplitOrbit
           ,GraphGroup
           ,GraphGroupHomomorphism
           ,StandardPermutationLadder
-          ,StroLLLightDoubleCosets
+          ,StroLLBreadthDoubleCosets
           ,PathRepresentative
           ,BlockStabilizerOrbit
           ,StroLLSmallestPathToCoset
-          ,StroLLLightSplitOrbit
           ,BlockPosition
           ,BlockStabilizerReinitialize
           ,PositionCanonical
@@ -208,18 +209,6 @@ LeiterspielBreadthGraphGenerationProfiling := function(n,k)
   UnprofileFunctions(fkts);
   ClearProfile();
 end;
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
